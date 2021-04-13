@@ -8,26 +8,35 @@ from resnetpytorch.models import resnet
 from variables import RootVariables
 #from skimage.transform import rotate
 
+class All_Models:
+    def __init__(self):
+        print("Setting up all models .. ")
+
+    def get_model(self, model_index, vision_model_depth, test_folder):
+        if model_index == 0:
+            return IMU_PIPELINE(), 'signal_checkpoint_' + test_folder[5:] + '.pth'
+        elif model_index == 1:
+            return VISION_PIPELINE(vision_model_depth), 'vision_checkpoint_' + test_folder[5:] + '.pth'
+        elif model_index == 2:
+            return FusionPipeline(vision_model_depth, test_folder), 'pipeline_checkpoint_' + test_folder[5:] + '.pth'
+
 class VISION_PIPELINE(nn.Module):
-    def __init__(self, checkpoint_path, trim_frame_size=150, input_channels=6, batch_norm=False):
+    def __init__(self, resnet_depth):
         super(VISION_PIPELINE, self).__init__()
         self.var = RootVariables()
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         torch.manual_seed(1)
-        self.net = FlowNetS.FlowNetS(batch_norm)
+        self.net = resnet.generate_model(50)
+        self.net.fc = nn.Linear(2048, 1039)
 
-        dict = torch.load(checkpoint_path)
+        dict = torch.load(self.var.root + 'r3d' + str(resnet_depth) + '_KM_200ep.pth')
+
         self.net.load_state_dict(dict["state_dict"])
-        self.net = nn.Sequential(*list(self.net.children())[0:9]).to("cuda:0")
-        for i in range(len(self.net) - 1):
-             self.net[i][1] = nn.ReLU()
 
-        self.fc1 = nn.Linear(1024*6*8, 4096).to("cuda:0")
-        self.fc2 = nn.Linear(4096,256).to("cuda:0")
-        self.fc3 = nn.Linear(256, 2).to("cuda:0")
+        self.fc1 = nn.Linear(1039, 256).to(self.device)
+        self.fc2 = nn.Linear(256,2).to(self.device)
         self.dropout = nn.Dropout(0.35)
         self.activation = nn.Sigmoid()
-        # self.net[8][1] = nn.ReLU(inplace=False)
-        self.net[8] = self.net[8][0]
         self.tensorboard_folder = ''
 
         for params in self.net.parameters():
@@ -37,18 +46,15 @@ class VISION_PIPELINE(nn.Module):
         return torch.logical_and((torch.abs(pred[:,0]-label[:,0]) <= 100.0), (torch.abs(pred[:,1]-label[:,1]) <= 100.0)).sum().item()
 
     def forward(self, input_img):
-        out = self.net(input_img).to("cuda:0")
-#        print(out.shape)
-        out = out.reshape(-1, 1024*6*8)
-        out = F.relu(self.dropout(self.fc1(out))).to("cuda:0")
-        out = F.relu(self.dropout(self.fc2(out))).to("cuda:0")
-        out = F.relu(self.fc3(out)).to("cuda:0")
+        out = self.net(input_img).to(self.device)
+        out = F.relu(self.dropout(self.fc1(out))).to(self.device)
+        out = F.relu(self.dropout(self.fc2(out))).to(self.device)
 
-        for index, val in enumerate(out):
-            if out[index][0] > 512.0:
-                out[index][0] = 512.0
-            if out[index][1] > 384.0:
-                out[index][1] = 384.0
+        # for index, val in enumerate(out):
+        #     if out[index][0] > 512.0:
+        #         out[index][0] = 512.0
+        #     if out[index][1] > 384.0:
+        #         out[index][1] = 384.0
 
         return out
 
@@ -111,12 +117,11 @@ class IMU_PIPELINE(nn.Module):
         return pred, labels
 
 class FusionPipeline(nn.Module):
-    def __init__(self, checkpoint, test_folder, device=None):
+    def __init__(self, resnet_depth, test_folder):
         super(FusionPipeline, self).__init__()
         torch.manual_seed(2)
         self.device = device
         self.var = RootVariables()
-        self.checkpoint_path = self.var.root + checkpoint
         self.activation = nn.Sigmoid()
         self.temporalSeq = 32
         self.temporalSize = 16
@@ -132,7 +137,7 @@ class FusionPipeline(nn.Module):
              params.requires_grad = True
 
         ## FRAME MODELS
-        self.frameModel =  VIS_ENCODER(self.checkpoint_path)
+        self.frameModel =  VIS_ENCODER(resnet_depth)
         frameCheckpoint = torch.load(self.var.root + 'datasets/' + test_folder[5:] + '/' + self.frameCheckpoint_file,  map_location="cuda:0")
         self.frameModel.load_state_dict(frameCheckpoint['model_state_dict'])
         for params in self.frameModel.parameters():
@@ -143,33 +148,33 @@ class FusionPipeline(nn.Module):
 
 #        self.fc1 = nn.Linear(self.var.hidden_size, 2).to("cuda:2")
         self.dropout = nn.Dropout(0.35)
-        self.fc0 = nn.Linear(512, 256).to("cuda:0")
-        self.fc1 = nn.Linear(256, 2).to("cuda:0")
+        self.fc0 = nn.Linear(512, 256).to(self.device)
+        self.fc1 = nn.Linear(256, 2).to(self.device)
 #        self.fc2 = nn.Linear(128, 2).to("cuda:2")
         ##OTHER
         self.imu_encoder_params = None
         self.frame_encoder_params = None
-        self.imuBN = nn.BatchNorm1d(self.var.hidden_size*2, affine=True).to("cuda:0")
-        self.frameBN = nn.BatchNorm1d(self.var.hidden_size*2, affine=True).to("cuda:0")
-        self.fcBN = nn.BatchNorm1d(256).to("cuda:0")
+        self.imuBN = nn.BatchNorm1d(self.var.hidden_size*2, affine=True).to(self.device)
+        self.frameBN = nn.BatchNorm1d(self.var.hidden_size*2, affine=True).to(self.device)
+        self.fcBN = nn.BatchNorm1d(256).to(self.device)
         self.tensorboard_folder = ''
 
     def get_encoder_params(self, imu_BatchData, frame_BatchData):
-        self.imu_encoder_params = F.relu(self.imuBN(self.imuModel(imu_BatchData.float()))).to("cuda:0")
-        self.frame_encoder_params = F.relu(self.frameBN(self.frameModel(frame_BatchData.float()))).to("cuda:0")
+        self.imu_encoder_params = F.relu(self.imuBN(self.imuModel(imu_BatchData.float()))).to(self.device)
+        self.frame_encoder_params = F.relu(self.frameBN(self.frameModel(frame_BatchData.float()))).to(self.device)
 #        self.frame_encoder_params = F.leaky_relu(self.dropout(self.downsample(self.frame_encoder_params)), 0.1).to("cuda:1")
         return self.imu_encoder_params, self.frame_encoder_params
 
     def fusion_network(self, imu_params, frame_params):
-        return torch.cat((frame_params, imu_params), dim=1).to("cuda:0")
+        return torch.cat((frame_params, imu_params), dim=1).to(self.device)
 
     def temporal_modelling(self, fused_params):
  #       newParams = fused_params.reshape(fused_params.shape[0], self.temporalSeq, self.temporalSize)
  #       tempOut = self.temporalModel(newParams.float()).to("cuda:2")
  #       gaze_pred = self.fc1(tempOut).to("cuda:2")
  #       print(fused_params, self.fc0.weight)
-        gaze_pred = F.relu(self.fcBN(self.fc0(self.dropout(fused_params)))).to("cuda:0")
-        gaze_pred = F.relu(self.fc1(self.dropout(gaze_pred))).to("cuda:0")
+        gaze_pred = F.relu(self.fcBN(self.fc0(self.dropout(fused_params)))).to(self.device)
+        gaze_pred = F.relu(self.fc1(self.dropout(gaze_pred))).to(self.device)
 #        gaze_pred = self.fc2(self.dropout(gaze_pred)).to("cuda:2")
 
         return gaze_pred
@@ -198,3 +203,56 @@ class FusionPipeline(nn.Module):
         labels[:,1] *= 2.8125
 
         return pred, labels
+
+class IMU_ENCODER(nn.Module):
+    def __init__(self):
+        super(IMU_ENCODER, self).__init__()
+        torch.manual_seed(0)
+        self.var = RootVariables()
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.lstm = nn.LSTM(self.var.imu_input_size, self.var.hidden_size, self.var.num_layers, batch_first=True, dropout=0.65, bidirectional=True).to(self.device)
+        # self.fc0 = nn.Linear(6, self.var.imu_input_size).to(self.device)
+        self.fc1 = nn.Linear(self.var.hidden_size*2, 2).to(self.device)
+
+    def forward(self, x):
+        h0 = torch.randn(self.var.num_layers*2, self.var.batch_size, self.var.hidden_size, requires_grad=True).to(self.device)
+        c0 = torch.randn(self.var.num_layers*2, self.var.batch_size, self.var.hidden_size, requires_grad=True).to(self.device)
+
+        # x = self.fc0(x)
+        out, _ = self.lstm(x, (h0, c0))
+        return out[:,-1,:]
+
+class TEMP_ENCODER(nn.Module):
+    def __init__(self, input_size):
+        super(TEMP_ENCODER, self).__init__()
+        torch.manual_seed(0)
+        self.var = RootVariables()
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.lstm = nn.LSTM(input_size, int(self.var.hidden_size/2), int(self.var.num_layers/2), batch_first=True, dropout=0.45, bidirectional=True).to(self.device)
+
+    def forward(self, x):
+        # hidden = (h0, c0)
+        h0 = torch.randn(self.var.num_layers, self.var.batch_size, int(self.var.hidden_size/2), requires_grad=True).to(self.device)
+        c0 = torch.randn(self.var.num_layers, self.var.batch_size, int(self.var.hidden_size/2), requires_grad=True).to(self.device)
+        out, _ = self.lstm(x, (h0, c0))
+        # out = self.activation(self.fc1(out[:,-1,:]))
+        return out[:,-1,:]
+
+class VIS_ENCODER(nn.Module):
+    def __init__(self, resnet_depth):
+        super(VIS_ENCODER, self).__init__()
+
+        self.var = RootVariables()
+        torch.manual_seed(1)
+        self.net = resnet.generate_model(50)
+
+        dict = torch.load(self.var.root + 'r3d' + str(resnet_depth) + '_KM_200ep.pth')
+        self.net.load_state_dict(dict["state_dict"])
+
+        for params in self.net.parameters():
+            params.requires_grad = True
+
+    def forward(self, input_img):
+        out = self.net(input_img)
+
+        return out

@@ -55,7 +55,7 @@ class BUILDING_DATASETS:
         print('Building gaze dataset ..')
         tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
         for index, subDir in enumerate(tqdmloader):
-            if 'train_BookShelf_S1' in subDir or 'train_Lift_S1' in subDir:
+            if 'train_BookShelf_S1' in subDir:
                 tqdmloader.set_description('Train folder: {}'.format(subDir))
                 self.temp = self.populate_gaze_data(subDir)
                 self.train_folders_num += 1
@@ -106,7 +106,7 @@ class BUILDING_DATASETS:
             print("Building Image dataset ..")
             tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
             for index, subDir in enumerate(tqdmloader):
-                if 'train_BookShelf_S1' in subDir or 'train_Lift_S1' in subDir:
+                if 'train_BookShelf_S1' in subDir :
                     tqdmloader.set_description('Train folder: {}'.format(subDir))
                     _ = os.system('mkdir ' + self.var.root + 'training_images/' + subDir)
                     total_frames = 0
@@ -191,7 +191,7 @@ class BUILDING_DATASETS:
         print('Building IMU dataset ..')
         tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
         for index, subDir in enumerate(tqdmloader):
-            if 'train_' in subDir :
+            if 'train_Book' in subDir :
                 tqdmloader.set_description('Train folder: {}'.format(subDir))
                 self.temp = self.populate_imu_data(subDir)
                 self.train_folders_num += 1
@@ -200,7 +200,7 @@ class BUILDING_DATASETS:
                 else:
                     self.train_new = self.temp
 
-            if 'test_' in subDir:
+            if 'test_XX' in subDir:
                 tqdmloader.set_description('Test folder: {}'.format(subDir))
                 self.temp = self.populate_imu_data(subDir)
                 self.test_folders_num += 1

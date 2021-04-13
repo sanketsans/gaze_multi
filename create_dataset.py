@@ -28,47 +28,69 @@ class All_Dataset:
             return self.FusionPipeline(folder_type, feat, labels)
 
     class FUSION_DATASET(Dataset):
-        def __init__(self, folder_type, imu_feat, labels):
-            self.imu_data = []
+        def __init__(self, csv_file_name, imu_feat, labels):
+            self.imu_data, self.gaze_data = [], []
             self.indexes = []
-            self.folder_type = folder_type
+            self.imgs_path = pd.read_csv('/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/' + csv_file_name + '.csv')
             checkedLast = False
+            subfolder = self.imgs_path.iloc[0, 1].split('/')[6]
+            contNone, f_index = 3, 0
             for index in range(len(labels)):
                 check = np.isnan(labels[index])
                 imu_check = np.isnan(imu_feat[index])
                 if check.any() or imu_check.any():
+                    contNone += 1
                     continue
                 else:
-                    self.indexes.append(index)
+                    f_index += 1 + contNone
+                    if self.imgs_path.iloc[f_index, 1].split('/')[6] == subfolder:
+                        self.indexes.append(f_index)
+                        contNone = 0
+                    else:
+                        f_index += 4
+                        contNone = 0
+                        self.indexes.append(f_index)
+                        subfolder = self.imgs_path.iloc[f_index, 1].split('/')[6]
                     self.imu_data.append(imu_feat[index])
+                    self.gaze_data.append(labels[index])
 
             self.imu_data = standarization(self.imu_data)
 
-            self.transforms = transforms.Compose([transforms.ToTensor()])
+            assert len(self.imu_data) == len(self.indexes)
+            assert len(self.gaze_data) == len(self.indexes)
+
+            self.transforms = transforms.Compose([
+                                            transforms.ToTensor(),
+                                            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         def __len__(self):
             return len(self.indexes) # len(self.labels)
 
         def __getitem__(self, index):
             f_index = self.indexes[index]
-    #        img = self.frames[f_index]
-            img =  np.load(self.var.root + self.folder_type + '/frames_' + str(f_index) +'.npy')
-            targets = self.gaze_data[f_index]
+            ##Imgs
+            for i in range(f_index, f_index-5, -1):
+                img = torch.cat((img, self.transforms(Image.open(self.imgs_path.iloc[i, 1])).unsqueeze(dim=3)), axis=3) if i < f_index else self.transforms(Image.open(self.imgs_path.iloc[i, 1])).unsqueeze(dim=3)
+
+            targets = self.gaze_data[index]
+
             targets[:,0] *= 512.0
             targets[:,1] *= 384.0
 
-            return self.transforms(img).to("cuda:0"), torch.from_numpy(self.imu_data[index]).to("cuda:0"), torch.from_numpy(targets).to("cuda:0")
+            return (img).to("cuda:0"), torch.from_numpy(self.imu_data[index]).to("cuda:0"), torch.from_numpy(targets).to("cuda:0")
 
     class VIS_FINAL_DATASET(Dataset):
         def __init__(self, csv_file_name, labels):
-            self.labels = labels
+            self.gaze_data = []
             self.indexes = []
             self.imgs_path = pd.read_csv('/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/' + csv_file_name + '.csv')
             checkedLast = False
             subfolder = self.imgs_path.iloc[0, 1].split('/')[6]
             contNone, f_index = 3, 0
-            for index in range(len(self.labels)):
-                check = np.isnan(self.labels[index])
+            for index in range(len(labels)):
+                check = np.isnan(labels[index])
                 if check.any():
                     contNone += 1
                     continue
@@ -82,11 +104,14 @@ class All_Dataset:
                         contNone = 0
                         self.indexes.append(f_index)
                         subfolder = self.imgs_path.iloc[f_index, 1].split('/')[6]
+                    self.gaze_data.append(labels[index])
 
             self.transforms = transforms.Compose([
                                             transforms.ToTensor(),
                                             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+            assert len(self.gaze_data) == len(self.indexes)
 
         def __len__(self):
             return len(self.indexes) # len(self.labels)
@@ -97,7 +122,7 @@ class All_Dataset:
             for i in range(f_index, f_index-5, -1):
                 img = torch.cat((img, self.transforms(Image.open(self.imgs_path.iloc[i, 1])).unsqueeze(dim=3)), axis=3) if i < f_index else self.transforms(Image.open(self.imgs_path.iloc[i, 1])).unsqueeze(dim=3)
 
-            targets = self.labels[index]
+            targets = self.gaze_data[index]
             #targets[:,0] *= 0.2667
             #targets[:,1] *= 0.3556
 
@@ -121,6 +146,8 @@ class All_Dataset:
 
             self.imu_data = standarization(self.imu_data)
 
+            assert len(self.imu_data) == len(self.gaze_data)
+
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         def __len__(self):
@@ -136,20 +163,26 @@ class All_Dataset:
 
 if __name__ =='__main__':
     var = RootVariables()
-    # dataset_folder = '/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/'
-    # os.chdir(dataset_folder)
-    dataframes = BUILDING_DATASETS('train_Lift_S1')
 
-    dataframes.load_unified_frame_dataset(reset_dataset=0)
+    dataframes = BUILDING_DATASETS('train_Lift_S1')
+    #
+    dataframes.load_unified_frame_dataset(reset_dataset=1)
     labels, _ = dataframes.load_unified_gaze_dataset()
     labels = labels.reshape(-1, 4, 2)
 
     ad = All_Dataset()
     dataset = ad.VIS_FINAL_DATASET('trainImg', labels)
-    i, l = dataset[1341]
+    i, l = dataset[400]
     model = resnet.generate_model(50)
-    # print(model)
+    # model.fc = nn.Linear(2048, 1039)
+    # dict = torch.load(var.root + 'r3d50_KM_200ep.pth')
+    # model.load_state_dict(dict["state_dict"])
+    print(model.avgpool)
+
     i = i.unsqueeze(dim=0)
     x = model(i)
+    fc = nn.Linear(400, 2)
+    a = nn.Sigmoid()
+    y = a(fc(x))
     print(x.shape)
-    print(i.shape)
+    print(y.shape)

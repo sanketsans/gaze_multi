@@ -155,10 +155,10 @@ class BUILDING_DATASETS:
 
             dict = {'image_paths': trainpaths}
             df = pd.DataFrame(dict)
-            df.to_csv('/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/trainImg.csv')
+            df.to_csv(os.path.dirname(os.path.realpath(__file__)) + '/trainImg.csv')
             dict = {'image_paths':testpaths}
             df = pd.DataFrame(dict)
-            df.to_csv('/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/testImg.csv')
+            df.to_csv(os.path.dirname(os.path.realpath(__file__)) + '/testImg.csv')
 
     def populate_imu_data(self, subDir):
 

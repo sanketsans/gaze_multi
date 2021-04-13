@@ -31,9 +31,10 @@ class All_Dataset:
         def __init__(self, csv_file_name, imu_feat, labels):
             self.imu_data, self.gaze_data = [], []
             self.indexes = []
-            self.imgs_path = pd.read_csv('/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/' + csv_file_name + '.csv')
+            self.imgs_path = pd.read_csv(os.path.dirname(os.path.realpath(__file__)) + '/' + csv_file_name + '.csv')
             checkedLast = False
-            subfolder = self.imgs_path.iloc[0, 1].split('/')[6]
+            name_index = 6 if len(self.imgs_path.iloc[0, 1].split('/')) > 4 else 3
+            subfolder = self.imgs_path.iloc[0, 1].split('/')[name_index]
             contNone, f_index = 3, 0
             for index in range(len(labels)):
                 check = np.isnan(labels[index])
@@ -43,14 +44,14 @@ class All_Dataset:
                     continue
                 else:
                     f_index += 1 + contNone
-                    if self.imgs_path.iloc[f_index, 1].split('/')[6] == subfolder:
+                    if self.imgs_path.iloc[f_index, 1].split('/')[name_index] == subfolder:
                         self.indexes.append(f_index)
                         contNone = 0
                     else:
                         f_index += 4
                         contNone = 0
                         self.indexes.append(f_index)
-                        subfolder = self.imgs_path.iloc[f_index, 1].split('/')[6]
+                        subfolder = self.imgs_path.iloc[f_index, 1].split('/')[name_index]
                     self.imu_data.append(imu_feat[index])
                     self.gaze_data.append(labels[index])
 
@@ -85,9 +86,10 @@ class All_Dataset:
         def __init__(self, csv_file_name, labels):
             self.gaze_data = []
             self.indexes = []
-            self.imgs_path = pd.read_csv('/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/' + csv_file_name + '.csv')
+            self.imgs_path = pd.read_csv(os.path.dirname(os.path.realpath(__file__)) + '/' + csv_file_name + '.csv')
             checkedLast = False
-            subfolder = self.imgs_path.iloc[0, 1].split('/')[6]
+            name_index = 6 if len(self.imgs_path.iloc[0, 1].split('/')) > 4 else 3
+            subfolder = self.imgs_path.iloc[0, 1].split('/')[name_index]
             contNone, f_index = 3, 0
             for index in range(len(labels)):
                 check = np.isnan(labels[index])
@@ -96,14 +98,14 @@ class All_Dataset:
                     continue
                 else:
                     f_index += 1 + contNone
-                    if self.imgs_path.iloc[f_index, 1].split('/')[6] == subfolder:
+                    if self.imgs_path.iloc[f_index, 1].split('/')[name_index] == subfolder:
                         self.indexes.append(f_index)
                         contNone = 0
                     else:
                         f_index += 4
                         contNone = 0
                         self.indexes.append(f_index)
-                        subfolder = self.imgs_path.iloc[f_index, 1].split('/')[6]
+                        subfolder = self.imgs_path.iloc[f_index, 1].split('/')[name_index]
                     self.gaze_data.append(labels[index])
 
             self.transforms = transforms.Compose([
@@ -164,25 +166,28 @@ class All_Dataset:
 if __name__ =='__main__':
     var = RootVariables()
 
-    dataframes = BUILDING_DATASETS('train_Lift_S1')
+    # dataframes = BUILDING_DATASETS('train_Lift_S1')
+    # #
+    # dataframes.load_unified_frame_dataset(reset_dataset=1)
+    # labels, _ = dataframes.load_unified_gaze_dataset()
+    # labels = labels.reshape(-1, 4, 2)
     #
-    dataframes.load_unified_frame_dataset(reset_dataset=1)
-    labels, _ = dataframes.load_unified_gaze_dataset()
-    labels = labels.reshape(-1, 4, 2)
+    # ad = All_Dataset()
+    # dataset = ad.VIS_FINAL_DATASET('trainImg', labels)
+    # i, l = dataset[400]
+    # model = resnet.generate_model(50)
+    # # model.fc = nn.Linear(2048, 1039)
+    # # dict = torch.load(var.root + 'r3d50_KM_200ep.pth')
+    # # model.load_state_dict(dict["state_dict"])
+    # print(model.avgpool)
+    #
+    # i = i.unsqueeze(dim=0)
+    # x = model(i)
+    # fc = nn.Linear(400, 2)
+    # a = nn.Sigmoid()
+    # y = a(fc(x))
+    # print(x.shape)
+    # print(y.shape)
 
-    ad = All_Dataset()
-    dataset = ad.VIS_FINAL_DATASET('trainImg', labels)
-    i, l = dataset[400]
-    model = resnet.generate_model(50)
-    # model.fc = nn.Linear(2048, 1039)
-    # dict = torch.load(var.root + 'r3d50_KM_200ep.pth')
-    # model.load_state_dict(dict["state_dict"])
-    print(model.avgpool)
-
-    i = i.unsqueeze(dim=0)
-    x = model(i)
-    fc = nn.Linear(400, 2)
-    a = nn.Sigmoid()
-    y = a(fc(x))
-    print(x.shape)
-    print(y.shape)
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    print(dir_path)

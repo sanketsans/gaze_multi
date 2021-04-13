@@ -57,8 +57,8 @@ if __name__ == '__main__':
 
             print(newFolder, lastFolder)
             trim_frame_size = 150
-            utils = Helpers(test_folder, args.reset_data)
-            imu_training, imu_testing, training_target, testing_target = utils.load_datasets(repeat=0)
+            utils = Helpers(test_folder)
+            imu_training, imu_testing, training_target, testing_target = utils.load_datasets(args.reset_data, repeat=0)
 
             pipeline, model_checkpoint = models.get_model(args.model, args.resnet_model, test_folder)
             # pipeline.tensorboard_folder = args.tfolder
@@ -71,18 +71,19 @@ if __name__ == '__main__':
                 checkpoint = torch.load(pipeline.var.root + model_checkpoint)
                 pipeline.load_state_dict(checkpoint['model_state_dict'])
                 optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-                best_test_loss = checkpoint['best_test_loss']
+                best_test_acc = checkpoint['best_test_loss']
                 # pipeline.current_loss = checkpoint['loss']
                 print('Model loaded')
 
 
             os.chdir(pipeline.var.root)
             print(torch.cuda.device_count())
-
+            best_test_acc = 0.0
             for epoch in tqdm(range(args.sepoch, args.nepoch), desc="epochs"):
+                print("Epoch :", epoch)
                 if epoch > 0:
-                    utils = Helpers(test_folder, reset_dataset=0)
-                    imu_training, imu_testing, training_target, testing_target = utils.load_datasets(repeat=1)
+                    utils = Helpers(test_folder)
+                    imu_training, imu_testing, training_target, testing_target = utils.load_datasets(reset_dataset=0, repeat=1)
 
                 ttraining_target = np.copy(training_target)
                 timu_training = np.copy(imu_training)
@@ -144,8 +145,8 @@ if __name__ == '__main__':
                     num_samples = 0
                     total_loss, total_correct, total_accuracy = [], 0.0, 0.0
                     dummy_correct, dummy_accuracy = 0.0, 0.0
-                    for batch_index, (frame_feat, imu_feat, labels) in enumerate(tqdm_testLoader):
-                        dummy_pts = (torch.ones(8, 2) * 0.5).to("cuda:0")
+                    for batch_index, items in enumerate(tqdm_testLoader):
+                        dummy_pts = (torch.ones(8, 2) * 0.5)
                         dummy_pts[:,0] *= 1920
                         dummy_pts[:,1] *= 1080
                         if args.model == 2:
@@ -180,15 +181,15 @@ if __name__ == '__main__':
                 # tb.add_scalar("Dummy Accuracy", np.floor(100.0*dummy_accuracy), epoch)
                 # tb.close()
 
-                if total_accuracy >= best_test_acc:
-                    best_test_acc = total_accuracy
-                    torch.save({
-                                'epoch': epoch,
-                                'model_state_dict': pipeline.state_dict(),
-                                'optimizer_state_dict': optimizer.state_dict(),
-                                'best_test_acc': best_test_acc,
-                                }, pipeline.var.root + 'datasets/' + test_folder[5:] + '/' + model_checkpoint)
-                    print('Model saved')
+                # if total_accuracy >= best_test_acc:
+                #     best_test_acc = total_accuracy
+                #     torch.save({
+                #                 'epoch': epoch,
+                #                 'model_state_dict': pipeline.state_dict(),
+                #                 'optimizer_state_dict': optimizer.state_dict(),
+                #                 'best_test_acc': best_test_acc,
+                #                 }, pipeline.var.root + 'datasets/' + test_folder[5:] + '/' + model_checkpoint)
+                #     print('Model saved')
 
             lastFolder = newFolder
 

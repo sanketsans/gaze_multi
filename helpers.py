@@ -48,14 +48,13 @@ def standarization(datas):
 
 
 class Helpers:
-    def __init__(self, test_folder, reset_dataset=0):
+    def __init__(self, test_folder):
         self.var = RootVariables()
         self.test_folder = test_folder
-        _ = os.system('mkdir ' + self.var.root + 'datasets')
-        _ = os.system('mkdir ' + self.var.root + 'datasets/' + test_folder[5:])
-        self.dataset = IMU_GAZE_FRAME_DATASET(self.test_folder, reset_dataset)
-        self.train_imu_dataset, self.test_imu_dataset = self.dataset.imu_train_datasets, self.dataset.imu_test_datasets
-        self.train_gaze_dataset, self.test_gaze_dataset = self.dataset.gaze_train_datasets, self.dataset.gaze_test_datasets
+        Path(self.var.root + 'datasets').mkdir(parents=True, exist_ok=True)
+        Path(self.var.root + 'datasets/' + test_folder[5:]).mkdir(parents=True, exist_ok=True)
+        # _ = os.system('mkdir -p' + self.var.root + 'datasets')
+        # _ = os.system('mkdir -p' + self.var.root + 'datasets/' + test_folder[5:])
 
         self.train_folders_num, self.test_folders_num = 0, 0
         self.gaze_start_index, self.gaze_end_index = 0, 0
@@ -147,7 +146,11 @@ class Helpers:
     #
     #     return frames, imu, gaze
 
-    def load_datasets(self, repeat):
+    def load_datasets(self, reset_dataset, repeat):
+        self.dataset = IMU_GAZE_FRAME_DATASET(self.test_folder, reset_dataset)
+        self.train_imu_dataset, self.test_imu_dataset = self.dataset.imu_train_datasets, self.dataset.imu_test_datasets
+        self.train_gaze_dataset, self.test_gaze_dataset = self.dataset.gaze_train_datasets, self.dataset.gaze_test_datasets
+
         test_folder = self.test_folder
         test_folder  = test_folder + '/' if test_folder[-1]!='/' else  test_folder
         toggle = 0
@@ -156,10 +159,10 @@ class Helpers:
 
         # check = False if Path(self.var.root + 'datasets/' + test_folder[5:] + str(self.var.frame_size) + '_imu_training_feat_' + test_folder[5:-1] + '.npy').is_file() else False
         if repeat == 1 :
-            imu_training_feat = np.load(self.var.root + 'datasets/' + test_folder[5:] + str(self.var.frame_size) + '_imu_training_feat_' + test_folder[5:-1]  + '.npy')
-            imu_testing_feat = np.load(self.var.root + 'datasets/' + test_folder[5:] + str(self.var.frame_size) + '_imu_testing_feat_' + test_folder[5:-1]  + '.npy')
-            training_target = np.load(self.var.root + 'datasets/' + test_folder[5:] + str(self.var.frame_size) + '_gaze_training_target_' + test_folder[5:-1]  + '.npy')
-            testing_target = np.load(self.var.root + 'datasets/' + test_folder[5:] + str(self.var.frame_size) + '_gaze_testing_target_' + test_folder[5:-1]  + '.npy')
+            imu_training_feat = np.load(self.var.root + 'datasets/' + test_folder[5:] + str(self.var.frame_size) + '_imu_training_feat_' + test_folder[5:-1]  + '.npy', allow_pickle=True)
+            imu_testing_feat = np.load(self.var.root + 'datasets/' + test_folder[5:] + str(self.var.frame_size) + '_imu_testing_feat_' + test_folder[5:-1]  + '.npy', allow_pickle=True)
+            training_target = np.load(self.var.root + 'datasets/' + test_folder[5:] + str(self.var.frame_size) + '_gaze_training_target_' + test_folder[5:-1]  + '.npy', allow_pickle=True)
+            testing_target = np.load(self.var.root + 'datasets/' + test_folder[5:] + str(self.var.frame_size) + '_gaze_testing_target_' + test_folder[5:-1]  + '.npy', allow_pickle=True)
 
         else:
             for index, subDir in enumerate(sorted(os.listdir(self.var.root))):

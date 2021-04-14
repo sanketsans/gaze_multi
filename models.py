@@ -59,13 +59,7 @@ class VISION_PIPELINE(nn.Module):
         return out
 
     def get_original_coordinates(self, pred, labels):
-        pred[:,0] *= 3.75
-        pred[:,1] *= 2.8125
-
-        labels[:,0] *= 3.75
-        labels[:,1] *= 2.8125
-
-        return pred, labels
+        return pred*torch.tensor([3.75, 2.8125]), labels*torch.tensor([3.75, 2.8125])
 
 class IMU_PIPELINE(nn.Module):
     def __init__(self):
@@ -74,7 +68,7 @@ class IMU_PIPELINE(nn.Module):
         self.var = RootVariables()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.lstm = nn.LSTM(self.var.imu_input_size, self.var.hidden_size, self.var.num_layers, batch_first=True, dropout=0.55, bidirectional=True).to(self.device)
-        # self.fc0 = nn.Linear(6, self.var.imu_input_size).to(self.device)
+        self.fc0 = nn.Linear(6, self.var.imu_input_size).to(self.device)
         self.fc1 = nn.Linear(self.var.hidden_size*2, 2).to(self.device)
         self.dropout = nn.Dropout(0.45)
         self.activation = nn.Sigmoid()
@@ -102,19 +96,13 @@ class IMU_PIPELINE(nn.Module):
         # h0 = torch.zeros(self.var.num_layers*2, self.var.batch_size, self.var.hidden_size).to(self.device)
         # c0 = torch.zeros(self.var.num_layers*2, self.var.batch_size, self.var.hidden_size).to(self.device)
 
-        # x = self.fc0(x)
+        x = self.fc0(x)
         out, _ = self.lstm(x, (h0, c0))
         out = F.relu(self.fc1(out[:,-1,:]))
         return out
 
     def get_original_coordinates(self, pred, labels):
-        pred[:,0] *= 3.75
-        pred[:,1] *= 2.8125
-
-        labels[:,0] *= 3.75
-        labels[:,1] *= 2.8125
-
-        return pred, labels
+        return pred*torch.tensor([3.75, 2.8125]), labels*torch.tensor([3.75, 2.8125])
 
 class FusionPipeline(nn.Module):
     def __init__(self, resnet_depth, test_folder):
@@ -196,13 +184,7 @@ class FusionPipeline(nn.Module):
         return torch.logical_and((torch.abs(pred[:,0]-label[:,0]) <= 100.0), (torch.abs(pred[:,1]-label[:,1]) <= 100.0)).sum().item()
 
     def get_original_coordinates(self, pred, labels):
-        pred[:,0] *= 3.75
-        pred[:,1] *= 2.8125
-
-        labels[:,0] *= 3.75
-        labels[:,1] *= 2.8125
-
-        return pred, labels
+        return pred*torch.tensor([3.75, 2.8125]), labels*torch.tensor([3.75, 2.8125])
 
 class IMU_ENCODER(nn.Module):
     def __init__(self):

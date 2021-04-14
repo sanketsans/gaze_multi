@@ -88,7 +88,7 @@ class All_Dataset:
             self.indexes = []
             self.imgs_path = pd.read_csv(os.path.dirname(os.path.realpath(__file__)) + '/' + csv_file_name + '.csv')
             checkedLast = False
-            name_index = 6 if len(self.imgs_path.iloc[0, 1].split('/')) > 4 else 3
+            name_index = 6 if len(self.imgs_path.iloc[0, 1].split('/')) > 7 else 3
             subfolder = self.imgs_path.iloc[0, 1].split('/')[name_index]
             contNone, f_index = 3, 0
             for index in range(len(labels)):

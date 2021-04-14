@@ -17,7 +17,6 @@ from variables import RootVariables
 from helpers import Helpers
 from models import All_Models
 from create_dataset import All_Dataset
-from signal_pipeline import SIG_FINAL_DATASET
 from torch.utils.tensorboard import SummaryWriter
 #from skimage.transform import rotate
 import random
@@ -111,6 +110,7 @@ if __name__ == '__main__':
                     num_samples += labels.size(0)
                     labels = labels[:,0,:]
 #                    print(pred, labels)
+                    pred, labels = pipeline.get_original_coordinates(pred, labels)
                     loss = criterion(pred.float(), labels.float())
                     optimizer.zero_grad()
                     loss.backward()
@@ -120,7 +120,7 @@ if __name__ == '__main__':
 
                     with torch.no_grad():
 
-                        pred, labels = pipeline.get_original_coordinates(pred, labels)
+                        # pred, labels = pipeline.get_original_coordinates(pred, labels)
 
 #                        dist = torch.cdist(pred, labels.float(), p=2)[0].unsqueeze(dim=0)
 #                        if batch_index > 0:
@@ -134,7 +134,8 @@ if __name__ == '__main__':
                         tqdm_trainLoader.set_description('training: ' + '_loss: {:.4} correct: {} accuracy: {:.3} lr:{}'.format(
                             np.mean(total_loss), total_correct, 100.0*total_accuracy, optimizer.param_groups[0]['lr']))
 
-#                scheduler.step()
+                if (epoch+1) % 20 == 0:
+                    scheduler.step()
                 pipeline.eval()
                 with torch.no_grad():
                     # tb = SummaryWriter(pipeline.var.root + 'datasets/' + test_folder[5:] + '/runs/' + pipeline.tensorboard_folder)
@@ -157,9 +158,10 @@ if __name__ == '__main__':
                             pred = pipeline(feat.float())
                         num_samples += labels.size(0)
                         labels = labels[:,0,:]
+                        pred, labels = pipeline.get_original_coordinates(pred, labels)
 
                         loss = criterion(pred.float(), labels.float())
-                        pred, labels = pipeline.get_original_coordinates(pred, labels)
+                        # pred, labels = pipeline.get_original_coordinates(pred, labels)
 
 #                        dist = torch.cdist(pred, labels.float(), p=2)[0].unsqueeze(dim=0)
 #                        if batch_index > 0:

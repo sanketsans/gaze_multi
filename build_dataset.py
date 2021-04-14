@@ -123,7 +123,7 @@ class BUILDING_DATASETS:
                         _, frame = self.capture.read()
                         frame = cv2.resize(frame, (398, 224))
                         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        path = '/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/training_images/' + subDir + 'image_' + str(train_frame_index) + '.jpg'
+                        path = self.var.root + 'training_images/' + subDir + 'image_' + str(train_frame_index) + '.jpg'
                         cv2.imwrite(path, frame)
                         # self.create_clips(self.capture, train_frame_index, 'training_images')
                         train_frame_index += 1
@@ -146,7 +146,7 @@ class BUILDING_DATASETS:
                         _, frame = self.capture.read()
                         frame = cv2.resize(frame, (398, 224))
                         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        path = '/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/testing_images/' + subDir + 'image_' + str(test_frame_index) + '.jpg'
+                        path = self.var.root + 'testing_images/' + subDir + 'image_' + str(test_frame_index) + '.jpg'
                         cv2.imwrite(path, frame)
                         # self.create_clips(self.capture, test_frame_index, 'testing_images')
                         test_frame_index += 1

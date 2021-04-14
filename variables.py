@@ -1,6 +1,7 @@
 class Variables:
     def __init__(self):
         self.root = '/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/'
+        self.root = '/data/Tobii_dataset/'
         # self.root = '/home/sanketthakur/Downloads/IMU-data_processing/'
         # self.root = '/home/sanketthakur/Downloads/Pavis_Social_Interaction_Attention_dataset/'
         self.gaze_dataList = []     ## list to handle data with multiple single element json items.
@@ -19,10 +20,11 @@ class Variables:
 class RootVariables:
     def __init__(self):
         self.root = '/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/'
+        self.root = '/data/Tobii_dataset/'
         # self.root = '/home/sanketthakur/Downloads/IMU-data_processing/'
         # self.root = '/home/sanketthakur/Downloads/Pavis_Social_Interaction_Attention_dataset/'
         self.frame_size = 256
-        self.imu_input_size = 6
+        self.imu_input_size = 128
         self.frame_input_channel = 6
         self.batch_size = 8
         self.hidden_size = 128

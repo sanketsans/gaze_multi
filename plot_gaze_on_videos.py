@@ -1,5 +1,8 @@
 import cv2, os, sys
 import numpy as np
+from tqdm import tqdm
+import pandas as pd
+from ast import literal_eval
 sys.path.append('../')
 from loader import JSON_LOADER
 from variables import RootVariables
@@ -10,23 +13,25 @@ def get_num_correct(pred, label):
 
 if __name__ == "__main__":
     var = RootVariables()
-    folder = 'train_shahid_Lift_S1/'
+    folder = 'train_BookShelf_S1/'
     uni = None
     os.chdir(var.root + folder)
-    capture = cv2.VideoCapture('scenevideo.mp4')
-    frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
-    dataset = JSON_LOADER(folder)
-    dataset.POP_GAZE_DATA(frame_count)
-    gaze_arr = np.array(dataset.var.gaze_data).transpose()
-    temp = np.zeros((frame_count*4-var.trim_frame_size*4*2 - 4, 2))
-    temp[:,0] = gaze_arr[tuple([np.arange(var.trim_frame_size*4 +4, frame_count*4 - var.trim_frame_size*4), [0]])]
-    temp[:,1] = gaze_arr[tuple([np.arange(var.trim_frame_size*4 +4, frame_count*4 - var.trim_frame_size*4), [1]])]
+    cap = cv2.VideoCapture('scenevideo.mp4')
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    # dataset = JSON_LOADER(folder)
+    # dataset.POP_GAZE_DATA(frame_count)
+    # gaze_arr = np.array(dataset.var.gaze_data).transpose()
+    # temp = np.zeros((frame_count*4-var.trim_frame_size*4*2 - 4, 2))
+    # temp[:,0] = gaze_arr[tuple([np.arange(var.trim_frame_size*4 +4, frame_count*4 - var.trim_frame_size*4), [0]])]
+    # temp[:,1] = gaze_arr[tuple([np.arange(var.trim_frame_size*4 +4, frame_count*4 - var.trim_frame_size*4), [1]])]
 
-    df = pd.read_csv('/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/test_BookShelf_S1/gaze_file.csv').to_numpy()
+    df = pd.read_csv('/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/train_BookShelf_S1/gaze_file.csv').to_numpy()
     correct, total_pts = 0, 0
-    for i in tqdm(range(frame_count-300)):
+    trim_size = 150
+    cap.set(cv2.CAP_PROP_POS_FRAMES,trim_size)
+    for i in tqdm(range(frame_count)):
         ret, frame = cap.read()
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         pts = [0.5, 0.5]
         try:
             gpts = list(map(literal_eval, df[trim_size+i, 1:]))
@@ -40,13 +45,13 @@ if __name__ == "__main__":
             frame = cv2.circle(frame, (int(pts[0]*1920),int(pts[1]*1080)), radius=5, color=(0, 0, 255), thickness=5)
             frame = cv2.circle(frame, (int(avg[0]*1920),int(avg[1]*1080)), radius=5, color=(0, 255, 0), thickness=5)
 
-            frame = cv2.rectangle(frame, start_point, end_point, color=(0, 0, 255), thickness=5)
-            frame = cv2.rectangle(frame, pred_start_point, pred_end_point, color=(0, 255, 0), thickness=5)
-            correct += get_num_correct(pts*[1920.0, 1080.0], avg*[1920.0, 1080.0])
+            # frame = cv2.rectangle(frame, start_point, end_point, color=(0, 0, 255), thickness=5)
+            # frame = cv2.rectangle(frame, pred_start_point, pred_end_point, color=(0, 255, 0), thickness=5)
+            correct += get_num_correct([a*b for a,b in zip(avg,[1920.0, 1080.0])], [a*b for a,b in zip(pts,[1920.0, 1080.0])])
             total_pts += 1
 
-        except:
-            pass
+        except Exception as e:
+            print(e)
         cv2.imshow('image', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

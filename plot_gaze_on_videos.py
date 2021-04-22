@@ -13,7 +13,7 @@ def get_num_correct(pred, label):
 
 if __name__ == "__main__":
     var = RootVariables()
-    folder = 'train_BookShelf_S1/'
+    folder = 'train_Supermarket_S1/'
     uni = None
     os.chdir(var.root + folder)
     cap = cv2.VideoCapture('scenevideo.mp4')
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     # temp[:,0] = gaze_arr[tuple([np.arange(var.trim_frame_size*4 +4, frame_count*4 - var.trim_frame_size*4), [0]])]
     # temp[:,1] = gaze_arr[tuple([np.arange(var.trim_frame_size*4 +4, frame_count*4 - var.trim_frame_size*4), [1]])]
 
-    df = pd.read_csv('/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/train_BookShelf_S1/gaze_file.csv').to_numpy()
+    df = pd.read_csv('/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/train_Outdoor_S1/gaze_file.csv').to_numpy()
     correct, total_pts = 0, 0
     trim_size = 150
     cap.set(cv2.CAP_PROP_POS_FRAMES,trim_size)
@@ -37,12 +37,12 @@ if __name__ == "__main__":
             gpts = list(map(literal_eval, df[trim_size+i, 1:]))
             avg = [sum(y) / len(y) for y in zip(*gpts)]
 
-            start_point = (int(pts[0]*frame.shape[1]) - 100, int(pts[1]*frame.shape[0]) + 100)
-            end_point = (int(pts[0]*frame.shape[1]) + 100, int(pts[1]*frame.shape[0]) - 100)
-            pred_start_point = (int(avg[0]*frame.shape[1]) - 100, int(avg[1]*frame.shape[0]) + 100)
-            pred_end_point = (int(avg[0]*frame.shape[1]) + 100, int(avg[1]*frame.shape[0]) - 100)
+            # start_point = (int(pts[0]*frame.shape[1]) - 100, int(pts[1]*frame.shape[0]) + 100)
+            # end_point = (int(pts[0]*frame.shape[1]) + 100, int(pts[1]*frame.shape[0]) - 100)
+            # pred_start_point = (int(avg[0]*frame.shape[1]) - 100, int(avg[1]*frame.shape[0]) + 100)
+            # pred_end_point = (int(avg[0]*frame.shape[1]) + 100, int(avg[1]*frame.shape[0]) - 100)
 
-            frame = cv2.circle(frame, (int(pts[0]*1920),int(pts[1]*1080)), radius=5, color=(0, 0, 255), thickness=5)
+            # frame = cv2.circle(frame, (int(pts[0]*1920),int(pts[1]*1080)), radius=5, color=(0, 0, 255), thickness=5)
             frame = cv2.circle(frame, (int(avg[0]*1920),int(avg[1]*1080)), radius=5, color=(0, 255, 0), thickness=5)
 
             # frame = cv2.rectangle(frame, start_point, end_point, color=(0, 0, 255), thickness=5)
@@ -51,9 +51,10 @@ if __name__ == "__main__":
             total_pts += 1
 
         except Exception as e:
-            print(e)
+            pass
         cv2.imshow('image', frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+        cv2.waitKey(0)
+        # if cv2.waitKey(1) & 0xFF == ord('q'):
+        #     break
 
     print('accuracy: ', 100.0*(correct / total_pts))

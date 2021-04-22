@@ -26,10 +26,11 @@ class VISION_PIPELINE(nn.Module):
         self.var = RootVariables()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         torch.manual_seed(1)
-        self.net = resnet.generate_model(50)
-        self.net.fc = nn.Linear(2048, 1039)
+        self.net = resnet.generate_model(50).to(self.device)
+        self.net.fc = nn.Linear(2048, 1039).to(self.device)
+        self.orig_tensor = torch.tensor([3.75, 2.8125]).to(self.device)
 
-        dict = torch.load(self.var.root + 'r3d' + str(resnet_depth) + '_KM_200ep.pth')
+        dict = torch.load(self.var.root + 'r3d' + str(resnet_depth) + '_KM_200ep.pth', map_location=self.device)
 
         self.net.load_state_dict(dict["state_dict"])
 
@@ -59,7 +60,7 @@ class VISION_PIPELINE(nn.Module):
         return out
 
     def get_original_coordinates(self, pred, labels):
-        return pred*torch.tensor([3.75, 2.8125]), labels*torch.tensor([3.75, 2.8125])
+        return pred*self.orig_tensor, labels*self.orig_tensor
 
 class IMU_PIPELINE(nn.Module):
     def __init__(self):
@@ -72,8 +73,9 @@ class IMU_PIPELINE(nn.Module):
         self.fc1 = nn.Linear(self.var.hidden_size*2, 2).to(self.device)
         self.dropout = nn.Dropout(0.45)
         self.activation = nn.Sigmoid()
+        self.orig_tensor = torch.tensor([3.75, 2.8125]).to(self.device)
 
-        self.tensorboard_folder = 'signal_Adam1' #'BLSTM_signal_outputs_sell1/'
+        self.tensorboard_folder = '' #'BLSTM_signal_outputs_sell1/'
 
     def get_num_correct(self, pred, label):
         return torch.logical_and((torch.abs(pred[:,0] - label[:,0]) <= 100.0), (torch.abs(pred[:,1]-label[:,1]) <= 100.0)).sum().item()
@@ -102,13 +104,13 @@ class IMU_PIPELINE(nn.Module):
         return out
 
     def get_original_coordinates(self, pred, labels):
-        return pred*torch.tensor([3.75, 2.8125]), labels*torch.tensor([3.75, 2.8125])
+        return pred*self.orig_tensor, labels*self.orig_tensor
 
 class FusionPipeline(nn.Module):
     def __init__(self, resnet_depth, test_folder):
         super(FusionPipeline, self).__init__()
         torch.manual_seed(2)
-        self.device = device
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.var = RootVariables()
         self.activation = nn.Sigmoid()
         self.temporalSeq = 32
@@ -116,6 +118,7 @@ class FusionPipeline(nn.Module):
         self.trim_frame_size = 150
         self.imuCheckpoint_file = 'signal_checkpoint0_' + test_folder[5:] + '.pth'
         self.frameCheckpoint_file = 'vision_checkpointAdam9CNN_' + test_folder[5:] +'.pth'
+        self.orig_tensor = torch.tensor([3.75, 2.8125]).to(self.device)
 
         ## IMU Models
         self.imuModel = IMU_ENCODER()
@@ -184,7 +187,7 @@ class FusionPipeline(nn.Module):
         return torch.logical_and((torch.abs(pred[:,0]-label[:,0]) <= 100.0), (torch.abs(pred[:,1]-label[:,1]) <= 100.0)).sum().item()
 
     def get_original_coordinates(self, pred, labels):
-        return pred*torch.tensor([3.75, 2.8125]), labels*torch.tensor([3.75, 2.8125])
+        return pred*self.orig_tensor, labels*self.orig_tensor
 
 class IMU_ENCODER(nn.Module):
     def __init__(self):

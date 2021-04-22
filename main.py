@@ -29,6 +29,7 @@ def boolean_string(s):
 
 if __name__ == '__main__':
     var = RootVariables()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     parser = argparse.ArgumentParser()
     parser.add_argument("--sepoch", type=int, default=0)
     # parser.add_argument('--sepoch', action='store_true', help='Run model in pseudo-fp16 mode (fp16 storage fp32 math).')
@@ -44,7 +45,7 @@ if __name__ == '__main__':
     All_Dataset = All_Dataset()
     models = All_Models()
     for index, subDir in enumerate(sorted(os.listdir(var.root))):
-        if 'train_' in subDir:
+        if 'train_shahid' in subDir:
             newFolder = subDir
             os.chdir(var.root)
 
@@ -64,7 +65,7 @@ if __name__ == '__main__':
             optimizer = optim.Adam(pipeline.parameters(), lr=0.0015, amsgrad=True) #, momentum=0.9)
             lambda1 = lambda epoch: 0.95 ** epoch
             scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda1)
-            criterion = nn.SmoothL1Loss()
+            criterion = nn.MSELoss()
             best_test_loss = 1000.0
             if Path(pipeline.var.root + 'datasets/' + test_folder[5:] + '/' + model_checkpoint).is_file():
                 checkpoint = torch.load(pipeline.var.root + model_checkpoint)
@@ -84,12 +85,12 @@ if __name__ == '__main__':
                     utils = Helpers(test_folder)
                     imu_training, imu_testing, training_target, testing_target = utils.load_datasets(reset_dataset=0, repeat=1)
 
-                ttraining_target = np.copy(training_target)
-                timu_training = np.copy(imu_training)
+                # ttraining_target = np.copy(training_target)
+                # timu_training = np.copy(imu_training)
                 trainDataset = All_Dataset.get_dataset('trainImg', imu_training, training_target, args.model)
                 trainLoader = torch.utils.data.DataLoader(trainDataset, shuffle=True, batch_size=pipeline.var.batch_size, drop_last=True, num_workers=0)
                 tqdm_trainLoader = tqdm(trainLoader)
-                testDataset = All_Dataset.get_dataset('trainImg', timu_training,  ttraining_target, args.model)
+                testDataset = All_Dataset.get_dataset('testImg', imu_testing,  testing_target, args.model)
                 testLoader = torch.utils.data.DataLoader(testDataset, shuffle=True, batch_size=pipeline.var.batch_size, drop_last=True, num_workers=0)
                 tqdm_testLoader = tqdm(testLoader)
 
@@ -136,6 +137,7 @@ if __name__ == '__main__':
 
                 if (epoch+1) % 20 == 0:
                     scheduler.step()
+
                 pipeline.eval()
                 with torch.no_grad():
                     # tb = SummaryWriter(pipeline.var.root + 'datasets/' + test_folder[5:] + '/runs/' + pipeline.tensorboard_folder)
@@ -147,7 +149,7 @@ if __name__ == '__main__':
                     total_loss, total_correct, total_accuracy = [], 0.0, 0.0
                     dummy_correct, dummy_accuracy = 0.0, 0.0
                     for batch_index, items in enumerate(tqdm_testLoader):
-                        dummy_pts = (torch.ones(8, 2) * 0.5)
+                        dummy_pts = (torch.ones(8, 2) * 0.5).to(device)
                         dummy_pts[:,0] *= 1920
                         dummy_pts[:,1] *= 1080
                         if args.model == 2:
@@ -192,6 +194,7 @@ if __name__ == '__main__':
                 #                 'best_test_acc': best_test_acc,
                 #                 }, pipeline.var.root + 'datasets/' + test_folder[5:] + '/' + model_checkpoint)
                 #     print('Model saved')
+
 
             lastFolder = newFolder
 

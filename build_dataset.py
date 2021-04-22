@@ -106,7 +106,7 @@ class BUILDING_DATASETS:
             print("Building Image dataset ..")
             tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
             for index, subDir in enumerate(tqdmloader):
-                if 'train_BookShelf_S1' in subDir :
+                if 'train_' in subDir :
                     tqdmloader.set_description('Train folder: {}'.format(subDir))
                     _ = os.system('mkdir ' + self.var.root + 'training_images/' + subDir)
                     total_frames = 0
@@ -129,8 +129,9 @@ class BUILDING_DATASETS:
                         train_frame_index += 1
                         trainpaths.append(path)
 
-                if 'test_XX' in subDir:
+                if 'test_shahid' in subDir:
                     tqdmloader.set_description('Test folder: {}'.format(subDir))
+                    _ = os.system('mkdir ' + self.var.root + 'testing_images/' + subDir)
                     total_frames = 0
                     subDir  = subDir + '/' if subDir[-1]!='/' else  subDir
                     os.chdir(self.var.root + subDir)

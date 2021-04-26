@@ -86,6 +86,7 @@ class JSON_LOADER:
                         diff *= 100
                         diff = int(diff)
                         a = [round(oT + 0.01*i, 2) for i in range(1, diff)]
+                        # self.var.gaze_data.extend(repeat(np.nan, diff-1))
                         self.var.gaze_data[0].extend(repeat(np.nan, diff - 1))
                         self.var.gaze_data[1].extend(repeat(np.nan, diff - 1))
                         self.var.timestamps_gaze.extend(a)
@@ -97,11 +98,12 @@ class JSON_LOADER:
                         # checked = True
 
                     else:
+                        # self.var.gaze_data.append(np.nan)
                         self.var.gaze_data[0].append(np.nan)
                         self.var.gaze_data[1].append(np.nan)
-                        # checked = True
 
             except Exception as e:
+                # self.var.gaze_data.append(np.nan)
                 self.var.gaze_data[0].append(np.nan)
                 self.var.gaze_data[1].append(np.nan)
                 checked = True

@@ -6,6 +6,7 @@ from torchvision import transforms
 sys.path.append('../')
 from resnetpytorch.models import resnet
 from variables import RootVariables
+from FlowNetPytorch.models import FlowNetS
 #from skimage.transform import rotate
 
 class All_Models:
@@ -26,13 +27,17 @@ class VISION_PIPELINE(nn.Module):
         self.var = RootVariables()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         torch.manual_seed(1)
-        self.net = resnet.generate_model(50).to(self.device)
-        self.net.fc = nn.Linear(2048, 1039).to(self.device)
-        self.orig_tensor = torch.tensor([3.75, 2.8125]).to(self.device)
+        self.net = FlowNetS.FlowNetS(batch_norm)
 
-        dict = torch.load(self.var.root + 'r3d' + str(resnet_depth) + '_KM_200ep.pth', map_location=self.device)
-
+        dict = torch.load(checkpoint_path)
         self.net.load_state_dict(dict["state_dict"])
+        self.net = nn.Sequential(*list(self.net.children())[0:9]).to("cuda:0")
+        for i in range(len(self.net) - 1):
+             self.net[i][1] = nn.ReLU()
+
+        self.fc1 = nn.Linear(1024*6*8, 4096).to("cuda:0")
+        self.fc2 = nn.Linear(4096,256).to("cuda:0")
+        self.fc3 = nn.Linear(256, 2).to("cuda:0")
 
         self.fc1 = nn.Linear(1039, 256).to(self.device)
         self.fc2 = nn.Linear(256,2).to(self.device)

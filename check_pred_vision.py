@@ -33,7 +33,7 @@ if __name__ == "__main__":
         testDataset = FINAL_DATASET('testing_images', testing_target)
         testLoader = torch.utils.data.DataLoader(testDataset, shuffle=False, batch_size=pipeline.var.batch_size, drop_last=True, num_workers=0)
 
-#        tqdm_trainLoader = tqdm(trainLoader)
+        # tqdm_trainLoader = tqdm(trainLoader)
         tqdm_testLoader = tqdm(testLoader)
 
         num_samples = 0

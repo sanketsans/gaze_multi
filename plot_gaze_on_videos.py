@@ -6,6 +6,8 @@ from ast import literal_eval
 import matplotlib.pyplot as plt
 sys.path.append('../')
 from loader import JSON_LOADER
+from PIL import Image
+from torchvision import transforms
 from variables import RootVariables
 
 def get_num_correct(pred, label):
@@ -81,6 +83,7 @@ def decay_heatmap(heatmap, sigma2=10):
 
 if __name__ == "__main__":
     var = RootVariables()
+    transforms = transforms.Compose([transforms.ToTensor()])
     folder = 'train_PosterSession_S2/'
     uni = None
     os.chdir(var.root + folder)
@@ -103,8 +106,13 @@ if __name__ == "__main__":
     trim_size = 150
     gpts = None
     cap.set(cv2.CAP_PROP_POS_FRAMES,trim_size)
+    img = Image.open(var.root + 'heatmap_training_images/train_BookShelf_S1/image_10.jpg')
+    a = transforms(img)
+    print(a.shape)
+    plt.imshow(img)
+    plt.show()
 
-    for i in tqdm(range(frame_count)):
+    for i in tqdm(range(frame_count-30000)):
         ret, frame = cap.read()
         # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         pts = [0.5, 0.5]

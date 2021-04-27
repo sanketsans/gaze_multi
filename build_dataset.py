@@ -57,7 +57,7 @@ class BUILDING_DATASETS:
         print('Building gaze dataset ..')
         tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
         for index, subDir in enumerate(tqdmloader):
-            if 'train_' in subDir:
+            if 'tratrain_' in subDir:
                 tqdmloader.set_description('Train folder: {}'.format(subDir))
                 self.temp = self.populate_gaze_data(subDir)
                 self.train_folders_num += 1
@@ -109,7 +109,7 @@ class BUILDING_DATASETS:
         print('Building IMU dataset ..')
         tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
         for index, subDir in enumerate(tqdmloader):
-            if 'train_' in subDir :
+            if 'tratrain_' in subDir :
                 tqdmloader.set_description('Train folder: {}'.format(subDir))
                 self.temp = self.populate_imu_data(subDir)
                 self.train_folders_num += 1
@@ -223,6 +223,9 @@ class BUILDING_DATASETS:
         ## INCLUDES THE LAST FRAME
         if reset_dataset == 1:
             print('Deleting the old dataset .. ')
+            _ = os.system('rm ' + self.var.root + 'heatmap_trainImg.csv')
+            _ = os.system('rm ' + self.var.root + 'heatmap_testImg.csv')
+
             _ = os.system('rm -r ' + self.var.root + 'heatmap_training_images')
             _ = os.system('rm -r ' + self.var.root + 'heatmap_testing_images')
 
@@ -233,7 +236,7 @@ class BUILDING_DATASETS:
             print("Building heatmap dataset ..")
             tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
             for index, subDir in enumerate(tqdmloader):
-                if 'train_' in subDir :
+                if 'tratrain_' in subDir :
                     tqdmloader.set_description('Train folder: {}'.format(subDir))
                     _ = os.system('mkdir ' + self.var.root + 'heatmap_training_images/' + subDir)
                     total_frames = 0
@@ -258,14 +261,18 @@ class BUILDING_DATASETS:
                         heatmapshow = None
                         try:
                             x = self.load_heatmap(frame, 1, i)
-                            # heatmapshow = cv2.normalize(x, heatmapshow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
-                            # heatmapshow = cv2.applyColorMap(heatmapshow, cv2.COLORMAP_JET)
+                            heatmapshow = cv2.normalize(x, heatmapshow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+                            heatmapshow = cv2.applyColorMap(heatmapshow, cv2.COLORMAP_JET)
                             # frame = cv2.addWeighted(heatmapshow, 0.5, frame, 0.7, 0)
+                            # cv2.imshow('image', x)
+                            # # cv2.waitKey(0)
+                            # if cv2.waitKey(1) & 0xFF == ord('q'):
+                            #     break
 
                         except Exception as e:
                             print(e)
                         path = self.var.root + 'heatmap_training_images/' + subDir + 'image_' + str(train_frame_index) + '.jpg'
-                        cv2.imwrite(path, x)
+                        cv2.imwrite(path, heatmapshow[:,:,0])
                         # self.create_clips(self.capture, train_frame_index, 'training_images')
                         train_frame_index += 1
                         trainpaths.append(path)
@@ -296,19 +303,20 @@ class BUILDING_DATASETS:
                         heatmapshow = None
                         try:
                             x = self.load_heatmap(frame, 1, i)
-                            # heatmapshow = cv2.normalize(x, heatmapshow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
-                            # heatmapshow = cv2.applyColorMap(heatmapshow, cv2.COLORMAP_JET)
+                            heatmapshow = cv2.normalize(x, heatmapshow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+                            heatmapshow = cv2.applyColorMap(heatmapshow, cv2.COLORMAP_JET)
                             # frame = cv2.addWeighted(heatmapshow, 0.5, frame, 0.7, 0)
 
                         except Exception as e:
                             print(e)
                         path = self.var.root + 'heatmap_testing_images/' + subDir + 'image_' + str(test_frame_index) + '.jpg'
-                        cv2.imwrite(path, x)
+                        cv2.imwrite(path, heatmapshow[:,:,0])
                         # self.create_clips(self.capture, test_frame_index, 'testing_images')
                         test_frame_index += 1
                         testpaths.append(path)
                     print(test_frame_index)
 
+            os.chdir(self.var.root)
             dict = {'image_paths': trainpaths}
             df = pd.DataFrame(dict)
             df.to_csv(os.path.dirname(os.path.realpath(__file__)) + '/heatmap_trainImg.csv')
@@ -346,7 +354,7 @@ class BUILDING_DATASETS:
             print("Building Image dataset ..")
             tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
             for index, subDir in enumerate(tqdmloader):
-                if 'train_' in subDir :
+                if 'tratrain_' in subDir :
                     tqdmloader.set_description('Train folder: {}'.format(subDir))
                     _ = os.system('mkdir ' + self.var.root + 'training_images/' + subDir)
                     total_frames = 0
@@ -358,7 +366,7 @@ class BUILDING_DATASETS:
                     self.capture.set(cv2.CAP_PROP_POS_FRAMES,self.var.trim_frame_size - 1)
                     for i in range(self.frame_count - 300 + 1): ## because we need frame no. 149 to stack with frame 150, to predict for frame no. 150
                         _, frame = self.capture.read()
-                        frame = cv2.resize(frame, (398, 224))
+                        frame = cv2.resize(frame, (512, 288))
                         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                         path = self.var.root + 'training_images/' + subDir + 'image_' + str(train_frame_index) + '.jpg'
                         cv2.imwrite(path, frame)
@@ -388,14 +396,13 @@ class BUILDING_DATASETS:
                         testpaths.append(path)
                     print(test_frame_index)
 
+            os.chdir(self.var.root)
             dict = {'image_paths': trainpaths}
             df = pd.DataFrame(dict)
             df.to_csv(os.path.dirname(os.path.realpath(__file__)) + '/trainImg.csv')
             dict = {'image_paths':testpaths}
             df = pd.DataFrame(dict)
             df.to_csv(os.path.dirname(os.path.realpath(__file__)) + '/testImg.csv')
-
-
 
 if __name__ == "__main__":
     var = RootVariables()

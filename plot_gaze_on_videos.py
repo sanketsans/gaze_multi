@@ -17,7 +17,7 @@ def create_circular_mask(h, w, center=None, radius=None):
     if center is None: # use the middle of the image
         center = (int(w/2), int(h/2))
     if radius is None: # use the smallest distance between the center and image walls
-        radius = 30 #min(center[0], center[1], w-center[0], h-center[1])
+        radius = 40 #min(center[0], center[1], w-center[0], h-center[1])
 
     Y, X = np.ogrid[:h, :w]
     dist_from_center = np.sqrt((X - center[0])**2 + (Y-center[1])**2)
@@ -81,13 +81,13 @@ def decay_heatmap(heatmap, sigma2=10):
 
 if __name__ == "__main__":
     var = RootVariables()
-    folder = 'train_SuperMarket_S1/'
+    folder = 'train_PosterSession_S2/'
     uni = None
     os.chdir(var.root + folder)
     cap = cv2.VideoCapture('scenevideo.mp4')
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    df = pd.read_csv('/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/train_SuperMarket_S1/gaze_file.csv').to_numpy()
+    df = pd.read_csv('/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/train_PosterSession_S2/gaze_file.csv').to_numpy()
     for i in range(len(df)):
         try:
             _ = (list(map(literal_eval, df[i, 1:])))
@@ -113,9 +113,10 @@ if __name__ == "__main__":
             frame = cv2.resize(frame, (512, 288))
 
             x = load_heatmap(frame, 1, i)
-            heatmapshow = cv2.normalize(x, heatmapshow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
-            heatmapshow = cv2.applyColorMap(heatmapshow, cv2.COLORMAP_JET)
-            frame = cv2.addWeighted(heatmapshow, 0.5, frame, 0.7, 0)
+            print(x.shape)
+            # heatmapshow = cv2.normalize(x, heatmapshow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+            # heatmapshow = cv2.applyColorMap(heatmapshow, cv2.COLORMAP_JET)
+            # frame = cv2.addWeighted(heatmapshow, 0.5, frame, 0.7, 0)
 
             # start_point = (int(pts[0]*frame.shape[1]) - 100, int(pts[1]*frame.shape[0]) + 100)
             # end_point = (int(pts[0]*frame.shape[1]) + 100, int(pts[1]*frame.shape[0]) - 100)
@@ -135,7 +136,7 @@ if __name__ == "__main__":
 
         except Exception as e:
             print(e)
-        cv2.imshow('image', frame)
+        cv2.imshow('image', x)
         # cv2.waitKey(0)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

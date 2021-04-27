@@ -57,7 +57,7 @@ class BUILDING_DATASETS:
         print('Building gaze dataset ..')
         tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
         for index, subDir in enumerate(tqdmloader):
-            if 'train_BookShelf_S1' in subDir:
+            if 'train_' in subDir:
                 tqdmloader.set_description('Train folder: {}'.format(subDir))
                 self.temp = self.populate_gaze_data(subDir)
                 self.train_folders_num += 1
@@ -66,7 +66,7 @@ class BUILDING_DATASETS:
                 else:
                     self.train_new = self.temp
 
-            if 'test_XX' in subDir:
+            if 'test_' in subDir:
                 tqdmloader.set_description('Test folder: {}'.format(subDir))
                 self.temp = self.populate_gaze_data(subDir)
                 self.test_folders_num += 1
@@ -109,7 +109,7 @@ class BUILDING_DATASETS:
         print('Building IMU dataset ..')
         tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
         for index, subDir in enumerate(tqdmloader):
-            if 'train_Book' in subDir :
+            if 'train_' in subDir :
                 tqdmloader.set_description('Train folder: {}'.format(subDir))
                 self.temp = self.populate_imu_data(subDir)
                 self.train_folders_num += 1
@@ -118,7 +118,7 @@ class BUILDING_DATASETS:
                 else:
                     self.train_new = self.temp
 
-            if 'test_XX' in subDir:
+            if 'test_' in subDir:
                 tqdmloader.set_description('Test folder: {}'.format(subDir))
                 self.temp = self.populate_imu_data(subDir)
                 self.test_folders_num += 1
@@ -233,7 +233,7 @@ class BUILDING_DATASETS:
             print("Building heatmap dataset ..")
             tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
             for index, subDir in enumerate(tqdmloader):
-                if 'train_Book' in subDir :
+                if 'train_' in subDir :
                     tqdmloader.set_description('Train folder: {}'.format(subDir))
                     _ = os.system('mkdir ' + self.var.root + 'heatmap_training_images/' + subDir)
                     total_frames = 0
@@ -258,20 +258,19 @@ class BUILDING_DATASETS:
                         heatmapshow = None
                         try:
                             x = self.load_heatmap(frame, 1, i)
-                            heatmapshow = cv2.normalize(x, heatmapshow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
-                            heatmapshow = cv2.applyColorMap(heatmapshow, cv2.COLORMAP_JET)
-                            frame = cv2.addWeighted(heatmapshow, 0.5, frame, 0.7, 0)
-
+                            # heatmapshow = cv2.normalize(x, heatmapshow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+                            # heatmapshow = cv2.applyColorMap(heatmapshow, cv2.COLORMAP_JET)
+                            # frame = cv2.addWeighted(heatmapshow, 0.5, frame, 0.7, 0)
 
                         except Exception as e:
                             print(e)
                         path = self.var.root + 'heatmap_training_images/' + subDir + 'image_' + str(train_frame_index) + '.jpg'
-                        cv2.imwrite(path, frame)
+                        cv2.imwrite(path, x)
                         # self.create_clips(self.capture, train_frame_index, 'training_images')
                         train_frame_index += 1
                         trainpaths.append(path)
 
-                if 'test_XX' in subDir:
+                if 'test_' in subDir:
                     tqdmloader.set_description('Test folder: {}'.format(subDir))
                     _ = os.system('mkdir ' + self.var.root + 'heatmap_testing_images/' + subDir)
                     total_frames = 0
@@ -280,14 +279,31 @@ class BUILDING_DATASETS:
                     self.capture = cv2.VideoCapture(self.video_file)
                     self.frame_count = int(self.capture.get(cv2.CAP_PROP_FRAME_COUNT))
 #                       _ = os.system('rm ' + str(self.var.frame_size) + '_framesExtracted_data_' + str(self.var.trim_frame_size) + '.npy')
+                    self.df = pd.read_csv('gaze_file.csv').to_numpy()
+                    for i in range(len(self.df)):
+                        try:
+                            _ = (list(map(literal_eval, self.df[i, 1:])))
+                        except:
+                            indexes = []
+                            for j in range(1, len(self.df[i])):
+                                if 'nan' in self.df[i][j]:
+                                    self.df[i][j] = '(0.0, 0.0)'
 
                     self.capture.set(cv2.CAP_PROP_POS_FRAMES,self.var.trim_frame_size)
                     for i in range(self.frame_count - 300): ## because we need frame no. 149 to stack with frame 150, to predict for frame no. 150
                         _, frame = self.capture.read()
                         frame = cv2.resize(frame, (512, 288)) # (398, 224)
-                        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        heatmapshow = None
+                        try:
+                            x = self.load_heatmap(frame, 1, i)
+                            # heatmapshow = cv2.normalize(x, heatmapshow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+                            # heatmapshow = cv2.applyColorMap(heatmapshow, cv2.COLORMAP_JET)
+                            # frame = cv2.addWeighted(heatmapshow, 0.5, frame, 0.7, 0)
+
+                        except Exception as e:
+                            print(e)
                         path = self.var.root + 'heatmap_testing_images/' + subDir + 'image_' + str(test_frame_index) + '.jpg'
-                        cv2.imwrite(path, frame)
+                        cv2.imwrite(path, x)
                         # self.create_clips(self.capture, test_frame_index, 'testing_images')
                         test_frame_index += 1
                         testpaths.append(path)

@@ -170,40 +170,45 @@ class BUILDING_DATASETS:
         mask = dist_from_center <= radius
         return mask
 
-    def load_heatmap(self, joints, n_joints, index):
-            joints = cv2.cvtColor(joints, cv2.COLOR_BGR2RGB)[:,:,0]
-            h, w = joints.shape
-            y1 = np.zeros((h, w, n_joints))
-            mask, gpts = None, None
-            for j in range(5):
-                try:
-                    gpts = list(map(literal_eval, self.df[self.var.trim_frame_size-4+index+j, 1:]))
-                except Exception as e:
-                    print(e)
+    def load_heatmap(joints, n_joints, index):
+        joints = cv2.cvtColor(joints, cv2.COLOR_BGR2RGB)[:,:,0]
+        h, w = joints.shape
+        y1 = np.zeros((h, w, n_joints))
+        padding = 40
+        mask = None
+        trim_size = 150
+        # x, y, = int(coordinates[0]*512), int(coordinates[1]*288)
+        for j in range(5):
+            y2 = np.copy(y1)
+            try:
+                gpts = list(map(literal_eval, df[trim_size-4+index+j, 1:]))
+            except Exception as e:
+                print(e)
 
-                telem = 4
-                for item in gpts:
-                    if (item[0] + item[1]) == 0:
-                        telem -= 1
+            telem = 4
+            for item in gpts:
+                if (item[0] + item[1]) == 0:
+                    telem -= 1
 
-                if telem > 0:
-                    coordinates = [sum(y) / telem for y in zip(*gpts)]
-                    center = (int(coordinates[0]*512), int(coordinates[1]*288))
-                    if j > 0 and coordinates[0] != 0.0:
-                        mask += self.create_circular_mask(h, w, center)
-                    else:
-                        mask = self.create_circular_mask(h, w, center)
+            if telem > 0:
+                coordinates = [sum(y) / telem for y in zip(*gpts)]
+                center = (int(coordinates[0]*512), int(coordinates[1]*288))
+                if j > 0 and coordinates[0] != 0.0:
+                    mask += create_circular_mask(h, w, center)
+                else:
+                    mask = create_circular_mask(h, w, center)
 
-                if mask is None:
-                    mask = self.create_circular_mask(h, w, radius=0)
+            if mask is None:
+                mask = create_circular_mask(h, w, radius=0)
 
-            for joint_id in range(1, n_joints + 1):
-                heatmap = np.zeros(joints.shape)
-                heatmap[mask] = 1.0
-        #         heatmap = (joints == joint_id).astype('float')
-                if heatmap.sum() > 0:
-                    y1[:, :, joint_id - 1] = self.decay_heatmap(heatmap)
-            return y1
+            heatmap = np.zeros(joints.shape)
+            heatmap[mask] = 1.0
+            if heatmap.sum() > 0 :
+                y2[:, :, 0] = decay_heatmap(heatmap, sigma2=30)
+
+            y1 += y2
+
+        return y1
 
     def decay_heatmap(self, heatmap, sigma2=10):
         """

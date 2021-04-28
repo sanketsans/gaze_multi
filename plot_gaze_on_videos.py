@@ -19,7 +19,7 @@ def create_circular_mask(h, w, center=None, radius=None):
     if center is None: # use the middle of the image
         center = (int(w/2), int(h/2))
     if radius is None: # use the smallest distance between the center and image walls
-        radius = 40 #min(center[0], center[1], w-center[0], h-center[1])
+        radius = 20 #min(center[0], center[1], w-center[0], h-center[1])
 
     Y, X = np.ogrid[:h, :w]
     dist_from_center = np.sqrt((X - center[0])**2 + (Y-center[1])**2)
@@ -28,19 +28,19 @@ def create_circular_mask(h, w, center=None, radius=None):
     return mask
 
 def load_heatmap(joints, n_joints, index):
-    # joints = cv2.imread(path)
     joints = cv2.cvtColor(joints, cv2.COLOR_BGR2RGB)[:,:,0]
-#     joints = np.load(path, allow_pickle=True)
     h, w = joints.shape
     y1 = np.zeros((h, w, n_joints))
     padding = 40
     mask = None
+    trim_size = 150
     # x, y, = int(coordinates[0]*512), int(coordinates[1]*288)
     for j in range(5):
+        y2 = np.copy(y1)
         try:
             gpts = list(map(literal_eval, df[trim_size-4+index+j, 1:]))
         except Exception as e:
-            pass
+            print(e)
 
         telem = 4
         for item in gpts:
@@ -58,13 +58,22 @@ def load_heatmap(joints, n_joints, index):
         if mask is None:
             mask = create_circular_mask(h, w, radius=0)
 
-    for joint_id in range(1, n_joints + 1):
         heatmap = np.zeros(joints.shape)
         heatmap[mask] = 1.0
-#         heatmap = (joints == joint_id).astype('float')
-        if heatmap.sum() > 0:
-            y1[:, :, joint_id - 1] = decay_heatmap(heatmap)
+        if heatmap.sum() > 0 :
+            y2[:, :, 0] = decay_heatmap(heatmap, sigma2=30)
+
+        y1 += y2
+
     return y1
+
+#     for joint_id in range(1, n_joints + 1):
+#         heatmap = np.zeros(joints.shape)
+#         heatmap[mask] = 1.0
+# #         heatmap = (joints == joint_id).astype('float')
+#         if heatmap.sum() > 0:
+#             y1[:, :, joint_id - 1] = decay_heatmap(heatmap)
+#     return y1
 
 def decay_heatmap(heatmap, sigma2=10):
     """
@@ -84,13 +93,13 @@ def decay_heatmap(heatmap, sigma2=10):
 if __name__ == "__main__":
     var = RootVariables()
     transforms = transforms.Compose([transforms.ToTensor()])
-    folder = 'train_PosterSession_S2/'
+    folder = 'train_shahid_PosterSession_S1/'
     uni = None
     os.chdir(var.root + folder)
     cap = cv2.VideoCapture('scenevideo.mp4')
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    df = pd.read_csv('/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/train_PosterSession_S2/gaze_file.csv').to_numpy()
+    df = pd.read_csv(var.root + folder + 'gaze_file.csv').to_numpy()
     for i in range(len(df)):
         try:
             _ = (list(map(literal_eval, df[i, 1:])))
@@ -100,19 +109,8 @@ if __name__ == "__main__":
                 if 'nan' in df[i][j]:
                     df[i][j] = '(0.0, 0.0)'
 
-
-    folder = '/Users/sanketsans/Downloads/gaze_multi/testing/'
-    correct, total_pts = 0, 0
-    trim_size = 150
-    gpts = None
-    cap.set(cv2.CAP_PROP_POS_FRAMES,trim_size)
-    img = Image.open(var.root + 'heatmap_training_images/train_BookShelf_S1/image_10.jpg')
-    a = transforms(img)
-    print(a.shape)
-    plt.imshow(img)
-    plt.show()
-
-    for i in tqdm(range(frame_count-30000)):
+    cap.set(cv2.CAP_PROP_POS_FRAMES,150)
+    for i in tqdm(range(frame_count-300)):
         ret, frame = cap.read()
         # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         pts = [0.5, 0.5]
@@ -121,10 +119,9 @@ if __name__ == "__main__":
             frame = cv2.resize(frame, (512, 288))
 
             x = load_heatmap(frame, 1, i)
-            print(x.shape)
-            # heatmapshow = cv2.normalize(x, heatmapshow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
-            # heatmapshow = cv2.applyColorMap(heatmapshow, cv2.COLORMAP_JET)
-            # frame = cv2.addWeighted(heatmapshow, 0.5, frame, 0.7, 0)
+            heatmapshow = cv2.normalize(x, heatmapshow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+            heatmapshow = cv2.applyColorMap(heatmapshow, cv2.COLORMAP_JET)
+            frame = cv2.addWeighted(heatmapshow, 0.5, frame, 0.7, 0)
 
             # start_point = (int(pts[0]*frame.shape[1]) - 100, int(pts[1]*frame.shape[0]) + 100)
             # end_point = (int(pts[0]*frame.shape[1]) + 100, int(pts[1]*frame.shape[0]) - 100)
@@ -140,11 +137,11 @@ if __name__ == "__main__":
             # frame = cv2.rectangle(frame, start_point, end_point, color=(0, 0, 255), thickness=5)
             # frame = cv2.rectangle(frame, pred_start_point, pred_end_point, color=(0, 255, 0), thickness=5)
             # correct += get_num_correct([a*b for a,b in zip(avg,[1920.0, 1080.0])], [a*b for a,b in zip(pts,[1920.0, 1080.0])])
-            total_pts += 1
+            # total_pts += 1
 
         except Exception as e:
             print(e)
-        cv2.imshow('image', x)
+        cv2.imshow('image', frame)
         # cv2.waitKey(0)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

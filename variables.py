@@ -1,7 +1,7 @@
 class Variables:
     def __init__(self):
-        self.root = '/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/'
-        # self.root = '/data/Tobii_dataset/'
+        # self.root = '/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/'
+        self.root = '/data/Tobii_dataset/'
         # self.root = '/home/sanketthakur/Downloads/IMU-data_processing/'
         # self.root = '/home/sanketthakur/Downloads/Pavis_Social_Interaction_Attention_dataset/'
         self.gaze_dataList = []     ## list to handle data with multiple single element json items.
@@ -19,8 +19,8 @@ class Variables:
 
 class RootVariables:
     def __init__(self):
-        self.root = '/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/'
-        # self.root = '/data/Tobii_dataset/'
+        # self.root = '/Users/sanketsans/Downloads/Pavis_Social_Interaction_Attention_dataset/'
+        self.root = '/data/Tobii_dataset/'
         # self.root = '/home/sanketthakur/Downloads/IMU-data_processing/'
         # self.root = '/home/sanketthakur/Downloads/Pavis_Social_Interaction_Attention_dataset/'
         self.imu_input_size = 128

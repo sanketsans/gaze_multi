@@ -57,7 +57,7 @@ class BUILDING_DATASETS:
         print('Building gaze dataset ..')
         tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
         for index, subDir in enumerate(tqdmloader):
-            if 'tratrain_' in subDir:
+            if 'sanket_' in subDir:
                 tqdmloader.set_description('Train folder: {}'.format(subDir))
                 self.temp = self.populate_gaze_data(subDir)
                 self.train_folders_num += 1
@@ -109,7 +109,7 @@ class BUILDING_DATASETS:
         print('Building IMU dataset ..')
         tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
         for index, subDir in enumerate(tqdmloader):
-            if 'tratrain_' in subDir :
+            if 'sanket_' in subDir :
                 tqdmloader.set_description('Train folder: {}'.format(subDir))
                 self.temp = self.populate_imu_data(subDir)
                 self.train_folders_num += 1
@@ -241,7 +241,7 @@ class BUILDING_DATASETS:
             print("Building heatmap dataset ..")
             tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
             for index, subDir in enumerate(tqdmloader):
-                if 'tratrain_' in subDir :
+                if 'train_' in subDir :
                     tqdmloader.set_description('Train folder: {}'.format(subDir))
                     _ = os.system('mkdir ' + self.var.root + 'heatmap_training_images/' + subDir)
                     total_frames = 0
@@ -277,7 +277,7 @@ class BUILDING_DATASETS:
                         except Exception as e:
                             print(e)
                         path = self.var.root + 'heatmap_training_images/' + subDir + 'image_' + str(train_frame_index) + '.jpg'
-                        cv2.imwrite(path, heatmapshow[:,:,0])
+                        cv2.imwrite(path, heatmapshow)
                         # self.create_clips(self.capture, train_frame_index, 'training_images')
                         train_frame_index += 1
                         trainpaths.append(path)
@@ -315,7 +315,7 @@ class BUILDING_DATASETS:
                         except Exception as e:
                             print(e)
                         path = self.var.root + 'heatmap_testing_images/' + subDir + 'image_' + str(test_frame_index) + '.jpg'
-                        cv2.imwrite(path, heatmapshow[:,:,0])
+                        cv2.imwrite(path, heatmapshow)
                         # self.create_clips(self.capture, test_frame_index, 'testing_images')
                         test_frame_index += 1
                         testpaths.append(path)
@@ -359,7 +359,7 @@ class BUILDING_DATASETS:
             print("Building Image dataset ..")
             tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
             for index, subDir in enumerate(tqdmloader):
-                if 'tratrain_' in subDir :
+                if 'train_' in subDir :
                     tqdmloader.set_description('Train folder: {}'.format(subDir))
                     _ = os.system('mkdir ' + self.var.root + 'training_images/' + subDir)
                     total_frames = 0
@@ -416,7 +416,9 @@ if __name__ == "__main__":
     dataframes = BUILDING_DATASETS('train_Lift_S1')
 
     # dataframes.load_unified_frame_dataset(reset_dataset=1)
-    dataframes.load_heatmap_dataset(reset_dataset=1)
+    # dataframes.load_heatmap_dataset(reset_dataset=1)
+    dataframes.load_unified_imu_dataset()
+    dataframes.load_unified_gaze_dataset()
 
     # trainIMU, testIMU = dataframes.load_unified_imu_dataset()
     # imu_datas= dataframes.load_unified_imu_dataset()

@@ -4,9 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import transforms
 sys.path.append('../')
-from resnetpytorch.models import resnet
 from variables import RootVariables
-from FlowNetPytorch.models import FlowNetS
+from flownet2pytorch.networks import FlowNetS
 #from skimage.transform import rotate
 
 class All_Models:
@@ -22,27 +21,44 @@ class All_Models:
             return FusionPipeline(vision_model_depth, test_folder), 'pipeline_checkpoint_' + test_folder[5:] + '.pth'
 
 class VISION_PIPELINE(nn.Module):
-    def __init__(self, resnet_depth):
+    def __init__(self):
         super(VISION_PIPELINE, self).__init__()
         self.var = RootVariables()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         torch.manual_seed(1)
-        self.net = FlowNetS.FlowNetS(batch_norm)
+        self.net = FlowNetS.FlowNetS(input_channels=6, batchNorm=False)
+        # dict = torch.load(checkpoint_path)
+        # self.net.load_state_dict(dict["state_dict"])
+        # self.net = nn.Sequential(*list(self.net.children())[:])
+        #
+        # self.net[0][0] = nn.Conv2d(6, 64, kernel_size=3, stride=2, padding=1)
+        # self.encoder1 = self.net[0]
+        # self.encoder2 = self.net[1]
+        # self.encoder3 = self.net[2]
+        # self.encoder4 = self.net[3]
+        #
+        # self.resnet_block = self.net[4]
+        #
+        # self.decoder1 = self.net[5]
+        # self.decoder1 = nn.Sequential(*list(self.decoder1.children())[:])
+        # self.decoder1[0] = nn.Conv2d(1024, 256, kernel_size=3, stride=2, padding=1)
+        # del self.decoder1[1:3]
+        #
+        # self.decoder2 = self.net[6]
+        # self.decoder2 = nn.Sequential(*list(self.decoder2.children())[:])
+        # self.decoder2[0] = nn.Conv2d(512, 128, kernel_size=3, stride=2, padding=1)
+        # del self.decoder2[1:3]
+        #
+        # self.decoder3 = self.net[7]
+        # self.decoder3 = nn.Sequential(*list(self.decoder3.children())[:])
+        # self.decoder3[0] = nn.Conv2d(256, 64, kernel_size=3, stride=2, padding=1)
+        # del self.decoder3[1:3]
+        #
+        # self.decoder4 = self.net[8]
+        # self.decoder4 = nn.Sequential(*list(self.decoder4.children())[:])
+        # self.decoder4[0] = nn.Conv2d(128, 32, kernel_size=3, stride=2, padding=1)
+        # del self.decoder4[1:3]
 
-        dict = torch.load(checkpoint_path)
-        self.net.load_state_dict(dict["state_dict"])
-        self.net = nn.Sequential(*list(self.net.children())[0:9]).to("cuda:0")
-        for i in range(len(self.net) - 1):
-             self.net[i][1] = nn.ReLU()
-
-        self.fc1 = nn.Linear(1024*6*8, 4096).to("cuda:0")
-        self.fc2 = nn.Linear(4096,256).to("cuda:0")
-        self.fc3 = nn.Linear(256, 2).to("cuda:0")
-
-        self.fc1 = nn.Linear(1039, 256).to(self.device)
-        self.fc2 = nn.Linear(256,2).to(self.device)
-        self.dropout = nn.Dropout(0.35)
-        self.activation = nn.Sigmoid()
         self.tensorboard_folder = ''
 
         for params in self.net.parameters():
@@ -52,17 +68,47 @@ class VISION_PIPELINE(nn.Module):
         return torch.logical_and((torch.abs(pred[:,0]-label[:,0]) <= 100.0), (torch.abs(pred[:,1]-label[:,1]) <= 100.0)).sum().item()
 
     def forward(self, input_img):
-        out = self.net(input_img).to(self.device)
-        out = F.relu(self.dropout(self.fc1(out))).to(self.device)
-        out = F.relu(self.dropout(self.fc2(out))).to(self.device)
+        # encoder
+        return self.net(input_img)
+        # skip_connections = {}
+        # inputs = self.encoder1(input_img)
+        # skip_connections['skip0'] = inputs.clone()
+        # inputs = self.encoder2(inputs)
+        # skip_connections['skip1'] = inputs.clone()
+        # inputs = self.encoder3(inputs)
+        # skip_connections['skip2'] = inputs.clone()
+        # inputs = self.encoder4(inputs)
+        # skip_connections['skip3'] = inputs.clone()
+        #
+        # # transition
+        # inputs = self.resnet_block(inputs)
+        #
+        # # decoder
+        # print(inputs.shape, skip_connections['skip3'].shape)
+        # flow_dict = {}
+        # inputs = torch.cat([inputs, skip_connections['skip3']], dim=1)
+        # inputs = self.decoder1(inputs)
+        # # flow_dict['flow0'] = flow.clone()
+        #
+        # print(inputs.shape, skip_connections['skip2'].shape)
+        #
+        # inputs = torch.cat([inputs, skip_connections['skip2']], dim=1)
+        # inputs = self.decoder2(inputs)
+        # # flow_dict['flow1'] = flow.clone()
+        #
+        # print(inputs.shape, skip_connections['skip1'].shape)
+        #
+        # inputs = torch.cat([inputs, skip_connections['skip1']], dim=1)
+        # inputs = self.decoder3(inputs)
+        # # flow_dict['flow2'] = flow.clone()
+        #
+        # print(inputs.shape, skip_connections['skip0'].shape)
+        #
+        # inputs = torch.cat([inputs, skip_connections['skip0']], dim=1)
+        # inputs = self.decoder4(inputs)
+        # flow_dict['flow3'] = flow.clone()
 
-        # for index, val in enumerate(out):
-        #     if out[index][0] > 512.0:
-        #         out[index][0] = 512.0
-        #     if out[index][1] > 384.0:
-        #         out[index][1] = 384.0
-
-        return out
+        # return flow_dict
 
     def get_original_coordinates(self, pred, labels):
         return pred*self.orig_tensor, labels*self.orig_tensor
@@ -246,3 +292,42 @@ class VIS_ENCODER(nn.Module):
         out = self.net(input_img)
 
         return out
+
+if __name__ == '__main__':
+    from EVFlowNetpytorch.src.config import configs
+    from torchvision import transforms
+    from PIL import Image
+    import matplotlib.pyplot as plt
+    import cv2
+    import numpy as np
+    args = configs()
+    model = VISION_PIPELINE()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    var = RootVariables()
+    f0 = var.root + 'testing_images/image_1.jpg'
+    f1 = var.root + 'testing_images/image_2.jpg'
+    frame1 = cv2.imread(f0)
+    t0 = transforms.ToTensor()(Image.open(f0))
+    t1 = transforms.ToTensor()(Image.open(f1))
+    print(model)
+    model.eval()
+    t = torch.cat((t0, t1), dim=0)
+    t = t.unsqueeze(dim=0)
+    x = model(t).to(device)
+    x = x.squeeze(dim=0)
+    c, h, w = x.shape
+    y = torch.ones((1, h, w))
+    x = torch.cat((x, y), dim=0)
+    x = x.permute(1, 2, 0)
+    print(x.shape)
+    x = x.detach().cpu().numpy()
+    mag, ang = cv2.cartToPolar(x[...,0], x[...,1])
+
+    hsv = np.zeros_like(x)
+    hsv[...,1] = 255
+    hsv[...,0] = ang*180/np.pi/2
+    hsv[...,2] = cv2.normalize(mag,None,0,255,cv2.NORM_MINMAX)
+    print(hsv.shape)
+    rgb = cv2.cvtColor(hsv,cv2.COLOR_HSV2BGR)
+    plt.imshow(x)
+    plt.show()

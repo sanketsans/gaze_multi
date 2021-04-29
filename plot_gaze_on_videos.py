@@ -6,9 +6,6 @@ from ast import literal_eval
 import matplotlib.pyplot as plt
 sys.path.append('../')
 from loader import JSON_LOADER
-from PIL import Image
-from torchvision import transforms
-from variables import RootVariables
 
 def get_num_correct(pred, label):
     return np.logical_and((np.abs(pred[0] - label[0]) <= 100.0), (np.abs(pred[1]-label[1]) <= 100.0)).sum().item()
@@ -91,9 +88,12 @@ def decay_heatmap(heatmap, sigma2=10):
 
 
 if __name__ == "__main__":
+    from PIL import Image
+    from torchvision import transforms
+    from variables import RootVariables
+
     var = RootVariables()
-    transforms = transforms.Compose([transforms.ToTensor()])
-    folder = 'train_shahid_PosterSession_S1/'
+    folder = 'train_shahid_PosterSession_S3/'
     uni = None
     os.chdir(var.root + folder)
     cap = cv2.VideoCapture('scenevideo.mp4')
@@ -110,6 +110,8 @@ if __name__ == "__main__":
                     df[i][j] = '(0.0, 0.0)'
 
     cap.set(cv2.CAP_PROP_POS_FRAMES,150)
+    folder = var.root + 'testing_images/'
+
     for i in tqdm(range(frame_count-300)):
         ret, frame = cap.read()
         # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -121,7 +123,7 @@ if __name__ == "__main__":
             x = load_heatmap(frame, 1, i)
             heatmapshow = cv2.normalize(x, heatmapshow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
             heatmapshow = cv2.applyColorMap(heatmapshow, cv2.COLORMAP_JET)
-            frame = cv2.addWeighted(heatmapshow, 0.5, frame, 0.7, 0)
+            frame = cv2.addWeighted(heatmapshow, 0.3, frame, 0.7, 0)
 
             # start_point = (int(pts[0]*frame.shape[1]) - 100, int(pts[1]*frame.shape[0]) + 100)
             # end_point = (int(pts[0]*frame.shape[1]) + 100, int(pts[1]*frame.shape[0]) - 100)
@@ -132,7 +134,7 @@ if __name__ == "__main__":
             # frame = cv2.circle(frame, (int(avg[0]*512),int(avg[1]*288)), radius=5, color=(0, 255, 0), thickness=5)
             # frame = cv2.addWeighted(heatmapshow, 0.6, frame, 0.3, 0)
             # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            # cv2.imwrite(folder + 'image_' + str(i) + '.jpg', frame)
+            cv2.imwrite(folder + 'image_' + str(i) + '.jpg', frame)
 
             # frame = cv2.rectangle(frame, start_point, end_point, color=(0, 0, 255), thickness=5)
             # frame = cv2.rectangle(frame, pred_start_point, pred_end_point, color=(0, 255, 0), thickness=5)

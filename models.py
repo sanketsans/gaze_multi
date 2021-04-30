@@ -5,7 +5,8 @@ import torch.nn.functional as F
 from torchvision import transforms
 sys.path.append('../')
 from variables import RootVariables
-from flownet2pytorch.networks import FlowNetS
+from FlowNetS import FlowNetS
+from submodules import deconv
 #from skimage.transform import rotate
 
 class All_Models:
@@ -26,7 +27,7 @@ class VISION_PIPELINE(nn.Module):
         self.var = RootVariables()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         torch.manual_seed(1)
-        self.net = FlowNetS.FlowNetS(input_channels=6, batchNorm=True)
+        self.net = FlowNetS(input_channels=6, batchNorm=True)
 
         self.tensorboard_folder = ''
 
@@ -50,7 +51,11 @@ class IMU_PIPELINE(nn.Module):
         self.var = RootVariables()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.lstm = nn.LSTM(self.var.imu_input_size, self.var.hidden_size, self.var.num_layers, batch_first=True, dropout=0.55, bidirectional=True).to(self.device)
-        self.fc0 = nn.Linear(6, self.var.imu_input_size).to(self.device)
+        # self.fc0 = nn.Linear(6, self.var.imu_input_size).to(self.device)
+        self.deconv = deconv(1, 3, kernel_size=4, stride=2, padding=1)
+        self.deconv1 = deconv(3, 3, kernel_size=4, stride=2, padding=1)
+        self.deconv2 = deconv(3, 3, kernel_size=4, stride=2, padding=1)
+        self.deconv3 = deconv(3, 3, kernel_size=(3, 4), stride=2, padding=1)
         self.fc1 = nn.Linear(self.var.hidden_size*2, 2).to(self.device)
         self.dropout = nn.Dropout(0.45)
         self.activation = nn.Sigmoid()
@@ -76,13 +81,18 @@ class IMU_PIPELINE(nn.Module):
     def forward(self, x):
         h0 = torch.randn(self.var.num_layers*2, self.var.batch_size, self.var.hidden_size, requires_grad=True).to(self.device)
         c0 = torch.randn(self.var.num_layers*2, self.var.batch_size, self.var.hidden_size, requires_grad=True).to(self.device)
-        # h0 = torch.zeros(self.var.num_layers*2, self.var.batch_size, self.var.hidden_size).to(self.device)
-        # c0 = torch.zeros(self.var.num_layers*2, self.var.batch_size, self.var.hidden_size).to(self.device)
 
-        x = self.fc0(x)
+        # x = self.fc0(x)
+        print(x.shape)
         out, _ = self.lstm(x, (h0, c0))
-        out = F.relu(self.fc1(out[:,-1,:]))
-        return out
+        out = out[:,-1,:].reshape(-1, 1, 16, 32)
+        out = self.deconv(out)
+        out = self.deconv1(out)
+        out = self.deconv2(out)
+        out = self.deconv3(out)
+        print(out.shape)
+        # out = F.relu(self.fc1(out[:,-1,:]))
+        # return out
 
     def get_original_coordinates(self, pred, labels):
         return pred*self.orig_tensor, labels*self.orig_tensor
@@ -188,22 +198,6 @@ class IMU_ENCODER(nn.Module):
         out, _ = self.lstm(x, (h0, c0))
         return out[:,-1,:]
 
-class TEMP_ENCODER(nn.Module):
-    def __init__(self, input_size):
-        super(TEMP_ENCODER, self).__init__()
-        torch.manual_seed(0)
-        self.var = RootVariables()
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.lstm = nn.LSTM(input_size, int(self.var.hidden_size/2), int(self.var.num_layers/2), batch_first=True, dropout=0.45, bidirectional=True).to(self.device)
-
-    def forward(self, x):
-        # hidden = (h0, c0)
-        h0 = torch.randn(self.var.num_layers, self.var.batch_size, int(self.var.hidden_size/2), requires_grad=True).to(self.device)
-        c0 = torch.randn(self.var.num_layers, self.var.batch_size, int(self.var.hidden_size/2), requires_grad=True).to(self.device)
-        out, _ = self.lstm(x, (h0, c0))
-        # out = self.activation(self.fc1(out[:,-1,:]))
-        return out[:,-1,:]
-
 class VIS_ENCODER(nn.Module):
     def __init__(self, resnet_depth):
         super(VIS_ENCODER, self).__init__()
@@ -227,34 +221,55 @@ if __name__ == '__main__':
     from torchvision import transforms
     from PIL import Image
     import matplotlib.pyplot as plt
+    from helpers import Helpers
     import cv2
     import numpy as np
+    from create_dataset import All_Dataset
 
-    model = VISION_PIPELINE()
+    # test_folder = 'test_CoffeeVendingMachine_S1​'
+    # utils = Helpers(test_folder)
+    # imu_training, imu_testing, training_target, testing_target = utils.load_datasets(1, repeat=0)
+    #
+    # All_Dataset = All_Dataset()
+    # trainDataset = All_Dataset.get_dataset('trainImg', imu_testing, 'heatmap_testImg', 0)
+    # a, _ = trainDataset[0]
+    # a = a.unsqueeze(dim=0)
+    # print(a.shape)
+    # model = IMU_PIPELINE()
+    # _ = model(a.float())
+
+
+
+
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     var = RootVariables()
-    f0 = var.root + 'testing_images/test_shahid_CoffeeVendingMachine_S1/image_58.jpg'
-    f1 = var.root + 'testing_images/test_shahid_CoffeeVendingMachine_S1/image_59.jpg'
+    f0 = var.root + 'heatmap_testing_images/test_CoffeeVendingMachine_S3/image_0.jpg'
+    f1 = var.root + 'heatmap_testing_images/test_CoffeeVendingMachine_S3/image_1.jpg'
     frame1 = cv2.imread(f0)
-    t0 = transforms.ToTensor()(Image.open(f0))
-    t1 = transforms.ToTensor()(Image.open(f1))
-    print(model)
-    model.eval()
-    t = torch.cat((t0, t1), dim=0)
-    t = t.unsqueeze(dim=0)
-    x = model(t).to(device)
-    x = x.squeeze(dim=0)
-    # c, h, w = x.shape
-    # y = torch.zeros((1, h, w))
-    # x = torch.cat((x, y), dim=0)
-    x = x.permute(1, 2, 0)
-    x = x.detach().cpu().numpy()
-    print(x)
-    x = cv2.GaussianBlur(x, (0, 0), 10)
-    x /= np.max(x)  # keep the max to 1
-    plt.imshow(x)
+    frame1 = cv2.resize(frame1, (32, 16))
+    plt.imshow(frame1)
     plt.show()
-    print(x.shape)
+    # t0 = transforms.ToTensor()(Image.open(f0))
+    # t1 = transforms.ToTensor()(Image.open(f1))
+    # model = VISION_PIPELINE()
+    # print(model)
+    # model.eval()
+    # t = torch.cat((t0, t1), dim=0)
+    # t = t.unsqueeze(dim=0)
+    # x = model(t).to(device)
+    # x = x.squeeze(dim=0)
+    # # c, h, w = x.shape
+    # # y = torch.zeros((1, h, w))
+    # # x = torch.cat((x, y), dim=0)
+    # x = x.permute(1, 2, 0)
+    # x = x.detach().cpu().numpy()
+    # print(x.shape)
+    # x = cv2.GaussianBlur(x, (0, 0), 10)
+    # x /= np.max(x)  # keep the max to 1
+    # plt.imshow(x)
+    # plt.show()
+    # print(x.shape)
     # mag, ang = cv2.cartToPolar(x[...,0], x[...,1])
     #
     # hsv = np.zeros_like(x)

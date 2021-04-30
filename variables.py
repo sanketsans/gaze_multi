@@ -23,9 +23,9 @@ class RootVariables:
         self.root = '/data/Tobii_dataset/'
         # self.root = '/home/sanketthakur/Downloads/IMU-data_processing/'
         # self.root = '/home/sanketthakur/Downloads/Pavis_Social_Interaction_Attention_dataset/'
-        self.imu_input_size = 128
+        self.imu_input_size = 6
         self.frame_input_channel = 6
-        self.batch_size = 8
+        self.batch_size = 1
         self.hidden_size = 256
         self.num_classes = 256
         self.trim_frame_size = 150

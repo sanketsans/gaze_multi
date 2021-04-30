@@ -57,7 +57,7 @@ class BUILDING_DATASETS:
         print('Building gaze dataset ..')
         tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
         for index, subDir in enumerate(tqdmloader):
-            if 'sanket_' in subDir:
+            if 'train_' in subDir:
                 tqdmloader.set_description('Train folder: {}'.format(subDir))
                 self.temp = self.populate_gaze_data(subDir)
                 self.train_folders_num += 1
@@ -109,7 +109,7 @@ class BUILDING_DATASETS:
         print('Building IMU dataset ..')
         tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
         for index, subDir in enumerate(tqdmloader):
-            if 'sanket_' in subDir :
+            if 'train_' in subDir :
                 tqdmloader.set_description('Train folder: {}'.format(subDir))
                 self.temp = self.populate_imu_data(subDir)
                 self.train_folders_num += 1
@@ -170,7 +170,7 @@ class BUILDING_DATASETS:
         mask = dist_from_center <= radius
         return mask
 
-    def load_heatmap(joints, n_joints, index):
+    def load_heatmap(self, joints, n_joints, index):
         joints = cv2.cvtColor(joints, cv2.COLOR_BGR2RGB)[:,:,0]
         h, w = joints.shape
         y1 = np.zeros((h, w, n_joints))
@@ -181,7 +181,7 @@ class BUILDING_DATASETS:
         for j in range(5):
             y2 = np.copy(y1)
             try:
-                gpts = list(map(literal_eval, df[trim_size-4+index+j, 1:]))
+                gpts = list(map(literal_eval, self.df[trim_size-4+index+j, 1:]))
             except Exception as e:
                 print(e)
 
@@ -194,17 +194,17 @@ class BUILDING_DATASETS:
                 coordinates = [sum(y) / telem for y in zip(*gpts)]
                 center = (int(coordinates[0]*512), int(coordinates[1]*288))
                 if j > 0 and coordinates[0] != 0.0:
-                    mask += create_circular_mask(h, w, center)
+                    mask += self.create_circular_mask(h, w, center)
                 else:
-                    mask = create_circular_mask(h, w, center)
+                    mask = self.create_circular_mask(h, w, center)
 
             if mask is None:
-                mask = create_circular_mask(h, w, radius=0)
+                mask = self.create_circular_mask(h, w, radius=0)
 
             heatmap = np.zeros(joints.shape)
             heatmap[mask] = 1.0
             if heatmap.sum() > 0 :
-                y2[:, :, 0] = decay_heatmap(heatmap, sigma2=30)
+                y2[:, :, 0] = self.decay_heatmap(heatmap, sigma2=30)
 
             y1 += y2
 
@@ -321,13 +321,13 @@ class BUILDING_DATASETS:
                         testpaths.append(path)
                     print(test_frame_index)
 
-            os.chdir(self.var.root)
             dict = {'image_paths': trainpaths}
             df = pd.DataFrame(dict)
-            df.to_csv(os.path.dirname(os.path.realpath(__file__)) + '/heatmap_trainImg.csv')
+            print()
+            df.to_csv(os.path.dirname(os.path.realpath(__file__)) + '/' + 'heatmap_trainImg.csv')
             dict = {'image_paths':testpaths}
             df = pd.DataFrame(dict)
-            df.to_csv(os.path.dirname(os.path.realpath(__file__)) + '/heatmap_testImg.csv')
+            df.to_csv(os.path.dirname(os.path.realpath(__file__)) + '/' + 'heatmap_testImg.csv')
 
     def create_clips(self, cap, index, type):
         fourcc = cv2.VideoWriter_fourcc(*'MPEG')

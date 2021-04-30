@@ -19,13 +19,13 @@ class All_Dataset:
     def __init__(self):
         self.var = RootVariables()
 
-    def get_dataset(self, csv_file_name, feat, labels, index):
+    def get_dataset(self, csv_file_name, feat, heatmap_img_csv, index):
         if index == 0:
-            return self.SIG_FINAL_DATASET(feat, labels)
+            return self.SIG_FINAL_DATASET(feat, heatmap_img_csv)
         elif index == 1:
-            return self.VIS_FINAL_DATASET(csv_file_name, labels)
+            return self.VIS_FINAL_DATASET(csv_file_name, heatmap_img_csv)
         else:
-            return self.FusionPipeline(csv_file_name, feat, labels)
+            return self.FusionPipeline(csv_file_name, feat, heatmap_img_csv)
 
     class FUSION_DATASET(Dataset):
         def __init__(self, original_img_csv, imu_feat, heatmap_img_csv):
@@ -74,6 +74,7 @@ class All_Dataset:
     class VIS_FINAL_DATASET(Dataset):
         def __init__(self, original_img_csv, heatmap_img_csv):
             self.indexes = []
+            # os.path.dirname(os.path.realpath(__file__))
             self.ori_imgs_path = pd.read_csv(os.path.dirname(os.path.realpath(__file__)) + '/' + original_img_csv + '.csv')
             self.heat_imgs_path = pd.read_csv(os.path.dirname(os.path.realpath(__file__)) + '/' + heatmap_img_csv + '.csv')
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -120,7 +121,7 @@ class All_Dataset:
                     continue
                 else:
                     self.indexes.append(index)
-                    self.imu_data.append(feat[index])
+                    self.imu_data.append(imu_feat[index])
 
             self.imu_data = standarization(self.imu_data)
 

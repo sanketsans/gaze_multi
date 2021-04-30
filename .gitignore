@@ -1,7 +1,5 @@
-
 *.pyc
 *.csv
 *.csv
 ./.git/
-./FlowNetPytorch/
-./EVFlowNetpytorch/
+./flownet2pytorch/

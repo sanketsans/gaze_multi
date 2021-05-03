@@ -38,7 +38,6 @@ if __name__ == '__main__':
     parser.add_argument("--reset_data", type=int)
     # parser.add_argument("--reset_tboard", type=boolean_string, default=True)
     parser.add_argument("--model", type=int, choices={0, 1, 2}, help="Model index number, 0 : Signal, 1: Vision, 2 : MultiModal ")
-    parser.add_argument("--resnet_model", type=int, default=50, choices={18, 34, 50}, help="Resnet3d depth")
     args = parser.parse_args()
 
     lastFolder, newFolder = None, None
@@ -60,12 +59,12 @@ if __name__ == '__main__':
             utils = Helpers(test_folder)
             imu_training, imu_testing, training_target, testing_target = utils.load_datasets(args.reset_data, repeat=0)
 
-            pipeline, model_checkpoint = models.get_model(args.model, args.resnet_model, test_folder)
+            pipeline, model_checkpoint = models.get_model(args.model, test_folder)
             # pipeline.tensorboard_folder = args.tfolder
-            optimizer = optim.Adam(pipeline.parameters(), lr=0.0015, amsgrad=True) #, momentum=0.9)
+            optimizer = optim.Adam(pipeline.parameters(), lr=0.00005, amsgrad=True) #, momentum=0.9)
             lambda1 = lambda epoch: 0.95 ** epoch
             scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda1)
-            criterion = nn.MSELoss()
+            criterion = nn.KLDivLoss(reduction='batchmean')
             best_test_loss = 1000.0
             if Path(pipeline.var.root + 'datasets/' + test_folder[5:] + '/' + model_checkpoint).is_file():
                 checkpoint = torch.load(pipeline.var.root + model_checkpoint)
@@ -74,7 +73,6 @@ if __name__ == '__main__':
                 best_test_acc = checkpoint['best_test_loss']
                 # pipeline.current_loss = checkpoint['loss']
                 print('Model loaded')
-
 
             os.chdir(pipeline.var.root)
             print(torch.cuda.device_count())
@@ -107,14 +105,14 @@ if __name__ == '__main__':
                         pred = pipeline(frame_feat, imu_feat)
                     else:
                         feat, labels = items
-                        preds = pipeline(feat.float())
+                        pred = pipeline(feat.float())
 
                     num_samples += labels.size(0)
-#                    print(pred, labels)
-                    pred, labels = pipeline.get_original_coordinates(pred, labels)
                     loss = criterion(pred.float(), labels.float())
                     optimizer.zero_grad()
                     loss.backward()
+#                    print(pred, labels)
+                    # pred, labels = pipeline.get_original_coordinates(pred, labels)
                     ## add gradient clipping
 #                    nn.utils.clip_grad_value_(pipeline.parameters(), clip_value=1.0)
                     optimizer.step()
@@ -140,8 +138,8 @@ if __name__ == '__main__':
 
                 pipeline.eval()
                 with torch.no_grad():
-                    # tb = SummaryWriter(pipeline.var.root + 'datasets/' + test_folder[5:] + '/runs/' + pipeline.tensorboard_folder)
-                    # tb.add_scalar("Train Loss", np.mean(total_loss), epoch)
+                    tb = SummaryWriter(pipeline.var.root + 'datasets/' + test_folder[5:] + '/runs/' + pipeline.tensorboard_folder)
+                    tb.add_scalar("Train Loss", np.mean(total_loss), epoch)
                     # tb.add_scalar("Training Correct", total_correct, epoch)
                     # tb.add_scalar("Train Accuracy", total_accuracy, epoch)
 
@@ -159,8 +157,8 @@ if __name__ == '__main__':
                             feat, labels = items
                             pred = pipeline(feat.float())
                         num_samples += labels.size(0)
-                        labels = labels[:,0,:]
-                        pred, labels = pipeline.get_original_coordinates(pred, labels)
+                        # labels = labels[:,0,:]
+                        # pred, labels = pipeline.get_original_coordinates(pred, labels)
 
                         loss = criterion(pred.float(), labels.float())
                         # pred, labels = pipeline.get_original_coordinates(pred, labels)

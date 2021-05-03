@@ -75,6 +75,7 @@ class All_Dataset:
         def __init__(self, original_img_csv, heatmap_img_csv):
             self.indexes = []
             # os.path.dirname(os.path.realpath(__file__))
+            self.gt_act = nn.Softmax2d()
             self.ori_imgs_path = pd.read_csv(os.path.dirname(os.path.realpath(__file__)) + '/' + original_img_csv + '.csv')
             self.heat_imgs_path = pd.read_csv(os.path.dirname(os.path.realpath(__file__)) + '/' + heatmap_img_csv + '.csv')
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -108,7 +109,7 @@ class All_Dataset:
                 img = torch.cat((img, self.transforms(Image.open(self.ori_imgs_path.iloc[i, 1]))), 0) if i < f_index else self.transforms(Image.open(self.ori_imgs_path.iloc[i, 1]))
                 # img = torch.cat((img, self.transforms(Image.open(self.ori_imgs_path.iloc[i, 1])).unsqueeze(dim=3)), axis=3) if i < f_index else self.transforms(Image.open(self.ori_imgs_path.iloc[i, 1])).unsqueeze(dim=3)
 
-            return (img).to(self.device), transforms.ToTensor()(Image.open(self.heat_imgs_path.iloc[index, 1])).to(self.device)
+            return (img).to(self.device), self.act(transforms.ToTensor()(Image.open(self.heat_imgs_path.iloc[index, 1]))).to(self.device)
 
     class SIG_FINAL_DATASET(Dataset):
         def __init__(self, imu_feat, heatmap_img_csv):

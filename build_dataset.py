@@ -221,7 +221,8 @@ class BUILDING_DATASETS:
             Heatmap obtained by gaussian-blurring the input
         """
         heatmap = cv2.GaussianBlur(heatmap, (0, 0), sigma2)
-        heatmap /= np.max(heatmap)  # keep the max to 1
+        heatmap /= np.sum(heatmap)
+        # heatmap /= np.max(heatmap)  # keep the max to 1
         return heatmap
 
     def load_heatmap_dataset(self, reset_dataset=0):

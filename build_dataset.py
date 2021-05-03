@@ -228,8 +228,8 @@ class BUILDING_DATASETS:
         ## INCLUDES THE LAST FRAME
         if reset_dataset == 1:
             print('Deleting the old dataset .. ')
-            _ = os.system('rm ' + self.var.root + 'heatmap_trainImg.csv')
-            _ = os.system('rm ' + self.var.root + 'heatmap_testImg.csv')
+            _ = os.system('rm ' + os.path.dirname(os.path.realpath(__file__)) + '/' + 'heatmap_trainImg.csv')
+            _ = os.system('rm ' + os.path.dirname(os.path.realpath(__file__)) + '/' + 'heatmap_testImg.csv')
 
             _ = os.system('rm -r ' + self.var.root + 'heatmap_training_images')
             _ = os.system('rm -r ' + self.var.root + 'heatmap_testing_images')
@@ -415,10 +415,12 @@ if __name__ == "__main__":
     # os.chdir(dataset_folder)
     dataframes = BUILDING_DATASETS('train_Lift_S1')
 
+    # dataframes.load_unified_imu_dataset()
+    # dataframes.load_unified_gaze_dataset()
     # dataframes.load_unified_frame_dataset(reset_dataset=1)
-    # dataframes.load_heatmap_dataset(reset_dataset=1)
-    dataframes.load_unified_imu_dataset()
-    dataframes.load_unified_gaze_dataset()
+    dataframes.load_heatmap_dataset(reset_dataset=1)
+#    dataframes.load_unified_imu_dataset()
+#    dataframes.load_unified_gaze_dataset()
 
     # trainIMU, testIMU = dataframes.load_unified_imu_dataset()
     # imu_datas= dataframes.load_unified_imu_dataset()

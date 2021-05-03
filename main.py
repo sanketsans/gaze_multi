@@ -87,10 +87,10 @@ if __name__ == '__main__':
 
                 # ttraining_target = np.copy(training_target)
                 # timu_training = np.copy(imu_training)
-                trainDataset = All_Dataset.get_dataset('trainImg', imu_training, training_target, args.model)
+                trainDataset = All_Dataset.get_dataset('trainImg', imu_training, 'heatmap_trainImg', args.model)
                 trainLoader = torch.utils.data.DataLoader(trainDataset, shuffle=True, batch_size=pipeline.var.batch_size, drop_last=True, num_workers=0)
                 tqdm_trainLoader = tqdm(trainLoader)
-                testDataset = All_Dataset.get_dataset('testImg', imu_testing,  testing_target, args.model)
+                testDataset = All_Dataset.get_dataset('testImg', imu_testing,  'heatmap_testImg', args.model)
                 testLoader = torch.utils.data.DataLoader(testDataset, shuffle=True, batch_size=pipeline.var.batch_size, drop_last=True, num_workers=0)
                 tqdm_testLoader = tqdm(testLoader)
 
@@ -107,9 +107,9 @@ if __name__ == '__main__':
                         pred = pipeline(frame_feat, imu_feat)
                     else:
                         feat, labels = items
-                        pred = pipeline(feat.float())
+                        preds = pipeline(feat.float())
+
                     num_samples += labels.size(0)
-                    labels = labels[:,0,:]
 #                    print(pred, labels)
                     pred, labels = pipeline.get_original_coordinates(pred, labels)
                     loss = criterion(pred.float(), labels.float())

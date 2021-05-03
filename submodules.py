@@ -29,8 +29,8 @@ def i_conv(batchNorm, in_planes, out_planes, kernel_size=3, stride=1, bias = Tru
             nn.Conv2d(in_planes, out_planes, kernel_size=kernel_size, stride=stride, padding=(kernel_size-1)//2, bias=bias),
         )
 
-def predict_flow(in_planes):
-    return nn.Conv2d(in_planes,3,kernel_size=3,stride=1,padding=1,bias=True)
+def predict_flow(in_planes, channels=2):
+    return nn.Conv2d(in_planes,channels,kernel_size=3,stride=1,padding=1,bias=True)
 
 def deconv(in_planes, out_planes, kernel_size=4, stride=2, padding=1):
     return nn.Sequential(

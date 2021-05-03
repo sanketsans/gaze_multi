@@ -5,8 +5,8 @@ import torch.nn.functional as F
 from torchvision import transforms
 sys.path.append('../')
 from variables import RootVariables
-from FlowNetS import FlowNetS
-from submodules import deconv
+from flownet2pytorch.networks import FlowNetS
+from submodules import *
 #from skimage.transform import rotate
 
 class All_Models:
@@ -27,7 +27,44 @@ class VISION_PIPELINE(nn.Module):
         self.var = RootVariables()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         torch.manual_seed(1)
-        self.net = FlowNetS(input_channels=6, batchNorm=True)
+        self.input_channels = 6
+        self.batchNorm = False
+        self.net = FlowNetS.FlowNetS(input_channels=self.input_channels, batchNorm=False)
+        dict = torch.load(self.var.root + 'FlowNet2-S_checkpoint.pth.tar', map_location="cpu")
+        self.net.load_state_dict(dict["state_dict"])
+        self.net = self.net = nn.Sequential(*list(self.net.children()))
+        self.conv1 = self.net[0]
+        self.conv2 = self.net[1]
+        self.conv3 = self.net[2]
+        self.conv3_1 = self.net[3]
+        self.conv4 = conv(self.batchNorm, 256, 512, stride=1)
+        self.conv4_1 = self.net[5]
+        self.conv5 = conv(self.batchNorm, 512, 512, stride=1)
+        self.conv5_1 = self.net[7]
+        self.conv6 = self.net[8]
+        self.conv6_1 = self.net[9]
+
+        self.deconv5 = self.net[10]
+        self.deconv4 = deconv(1024, 256, kernel_size=3, stride=1)
+        self.deconv3 = deconv(768, 128, kernel_size=3, stride=1)
+        self.deconv2 = deconv(384, 64, kernel_size=4)
+        self.deconv1 = deconv(192, 32, kernel_size=(4, 4), stride=2)
+        self.deconv0 = deconv(96, self.input_channels, kernel_size=4)
+
+        self.predict_flow6 = self.net[14]
+        self.predict_flow5 = predict_flow(1024)
+        self.predict_flow4 = predict_flow(768)
+        self.predict_flow3 = predict_flow(384)
+        self.predict_flow2 = predict_flow(192)
+        self.predict_flow1 = predict_flow(96)
+        self.predict_flow0 = predict_flow(6, channels=3)
+
+        self.upsampled_flow6_to_5 = self.net[19]
+        self.upsampled_flow5_to_4 = self.net[20]
+        self.upsampled_flow4_to_3 = self.net[21]
+        self.upsampled_flow3_to_2 = self.net[22]
+        self.upsampled_flow2_to_1 = nn.ConvTranspose2d(2, 2, 4, 2, 1, bias=False)
+        self.upsampled_flow1_to_0 = nn.ConvTranspose2d(2, 2, 4, 2, 1, bias=False)
 
         self.tensorboard_folder = ''
 
@@ -39,7 +76,51 @@ class VISION_PIPELINE(nn.Module):
 
     def forward(self, input_img):
         # encoder & decoder
-        return self.net(input_img)
+        out_conv1 = self.conv1(input_img)
+        out_conv2 = self.conv2(out_conv1)
+        out_conv3 = self.conv3_1(self.conv3(out_conv2))
+        out_conv4 = self.conv4_1(self.conv4(out_conv3))
+        out_conv5 = self.conv5_1(self.conv5(out_conv4))
+        out_conv6 = self.conv6_1(self.conv6(out_conv5))
+
+        # flow6       = self.predict_flow6(out_conv6)
+        # flow6_up    = self.upsampled_flow6_to_5(flow6)
+        out_deconv5 = self.deconv5(out_conv6)
+
+        concat5 = torch.cat((out_conv5,out_deconv5),1)
+        # flow5       = self.predict_flow5(concat5)
+        # flow5_up    = self.upsampled_flow5_to_4(flow5)
+        out_deconv4 = self.deconv4(concat5)
+
+        concat4 = torch.cat((out_conv4,out_deconv4),1)
+        # flow4       = self.predict_flow4(concat4)
+        # flow4_up    = self.upsampled_flow4_to_3(flow4)
+        out_deconv3 = self.deconv3(concat4)
+
+        concat3 = torch.cat((out_conv3,out_deconv3),1)
+        # flow3       = self.predict_flow3(concat3)
+        # flow3_up    = self.upsampled_flow3_to_2(flow3)
+        out_deconv2 = self.deconv2(concat3)
+
+        concat2 = torch.cat((out_conv2, out_deconv2),1)
+        # flow2       = self.predict_flow2(concat2)
+        # flow2_up    = self.upsampled_flow2_to_1(flow2)
+        out_deconv1 = self.deconv1(concat2)
+
+        concat1 = torch.cat((out_conv1, out_deconv1), 1)
+        # flow1       = self.predict_flow1(concat1)
+        # flow1_up    = self.upsampled_flow1_to_0(flow1)
+        out_deconv0 = self.deconv0(concat1)
+
+        flow = self.predict_flow0(out_deconv0)
+        flow0 = F.softmax(flow, dim=1)
+
+        return flow0
+
+        # if self.training:
+        #     return flow0, flow1, flow2, flow3, flow4, flow5, flow6
+        # else:
+        #     return flow0
 
     def get_original_coordinates(self, pred, labels):
         return pred*self.orig_tensor, labels*self.orig_tensor
@@ -244,27 +325,25 @@ if __name__ == '__main__':
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     var = RootVariables()
-    f0 = var.root + 'heatmap_testing_images/test_CoffeeVendingMachine_S3/image_0.jpg'
-    f1 = var.root + 'heatmap_testing_images/test_CoffeeVendingMachine_S3/image_1.jpg'
-    frame1 = cv2.imread(f0)
-    frame1 = cv2.resize(frame1, (32, 16))
-    plt.imshow(frame1)
-    plt.show()
-    # t0 = transforms.ToTensor()(Image.open(f0))
-    # t1 = transforms.ToTensor()(Image.open(f1))
+    f0 = var.root + 'heatmap_testing_images/test_shahid_CoffeeVendingMachine_S1/image_5892.jpg'
+    f1 = var.root + 'heatmap_testing_images/test_shahid_CoffeeVendingMachine_S1/image_5893.jpg'
+    # frame1 = cv2.imread(f0)
+    # frame1 = cv2.resize(frame1, (32, 16))
+    # plt.imshow(frame1)
+    # plt.show()
+    t0 = transforms.ToTensor()(Image.open(f0))
+    t1 = transforms.ToTensor()(Image.open(f1))
+
     # model = VISION_PIPELINE()
     # print(model)
     # model.eval()
     # t = torch.cat((t0, t1), dim=0)
     # t = t.unsqueeze(dim=0)
     # x = model(t).to(device)
+    # print(x.shape)
     # x = x.squeeze(dim=0)
-    # # c, h, w = x.shape
-    # # y = torch.zeros((1, h, w))
-    # # x = torch.cat((x, y), dim=0)
     # x = x.permute(1, 2, 0)
     # x = x.detach().cpu().numpy()
-    # print(x.shape)
     # x = cv2.GaussianBlur(x, (0, 0), 10)
     # x /= np.max(x)  # keep the max to 1
     # plt.imshow(x)

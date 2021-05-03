@@ -166,7 +166,7 @@ class Helpers:
 
         else:
             for index, subDir in enumerate(sorted(os.listdir(self.var.root))):
-                if 'tratrain_' in subDir:
+                if 'train_' in subDir:
                     if toggle != 1:
                         toggle = 1
                         self.gaze_start_index, self.imu_start_index = 0, 0

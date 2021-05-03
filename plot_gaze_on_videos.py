@@ -83,12 +83,15 @@ def decay_heatmap(heatmap, sigma2=10):
         Heatmap obtained by gaussian-blurring the input
     """
     heatmap = cv2.GaussianBlur(heatmap, (0, 0), sigma2)
-    heatmap /= np.max(heatmap)  # keep the max to 1
+    heatmap /= np.sum(heatmap)
+    # heatmap = (heatmap - np.min(heatmap)) / (np.max(heatmap) - np.min(heatmap))
+    # heatmap /= np.max(heatmap)  # keep the max to 1
     return heatmap
 
 
 if __name__ == "__main__":
     from PIL import Image
+    import torch
     from torchvision import transforms
     from variables import RootVariables
 
@@ -123,7 +126,11 @@ if __name__ == "__main__":
             x = load_heatmap(frame, 1, i)
             heatmapshow = cv2.normalize(x, heatmapshow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
             heatmapshow = cv2.applyColorMap(heatmapshow, cv2.COLORMAP_JET)
+            # print(torch.argmax(tx, dim=1), torch.argmax(tx, dim=2))
+            # coo = list(map(literal_eval, df[i, 1:]))
+            # avg = [sum(y) / len(y) for y in zip(*coo)]
             frame = cv2.addWeighted(heatmapshow, 0.3, frame, 0.7, 0)
+
 
             # start_point = (int(pts[0]*frame.shape[1]) - 100, int(pts[1]*frame.shape[0]) + 100)
             # end_point = (int(pts[0]*frame.shape[1]) + 100, int(pts[1]*frame.shape[0]) - 100)
@@ -134,7 +141,7 @@ if __name__ == "__main__":
             # frame = cv2.circle(frame, (int(avg[0]*512),int(avg[1]*288)), radius=5, color=(0, 255, 0), thickness=5)
             # frame = cv2.addWeighted(heatmapshow, 0.6, frame, 0.3, 0)
             # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            cv2.imwrite(folder + 'image_' + str(i) + '.jpg', frame)
+            # cv2.imwrite(folder + 'image_' + str(i) + '.jpg', frame)
 
             # frame = cv2.rectangle(frame, start_point, end_point, color=(0, 0, 255), thickness=5)
             # frame = cv2.rectangle(frame, pred_start_point, pred_end_point, color=(0, 255, 0), thickness=5)

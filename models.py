@@ -13,7 +13,7 @@ class All_Models:
     def __init__(self):
         print("Setting up all models .. ")
 
-    def get_model(self, model_index, vision_model_depth, test_folder):
+    def get_model(self, model_index, test_folder):
         if model_index == 0:
             return IMU_PIPELINE(), 'signal_checkpoint_' + test_folder[5:] + '.pth'
         elif model_index == 1:
@@ -67,6 +67,7 @@ class VISION_PIPELINE(nn.Module):
         self.upsampled_flow1_to_0 = nn.ConvTranspose2d(2, 2, 4, 2, 1, bias=False)
 
         self.tensorboard_folder = ''
+        self.activation = nn.Softmax2d()
 
         for params in self.net.parameters():
             params.requires_grad = True
@@ -113,7 +114,7 @@ class VISION_PIPELINE(nn.Module):
         out_deconv0 = self.deconv0(concat1)
 
         flow = self.predict_flow0(out_deconv0)
-        flow0 = F.softmax(flow, dim=1)
+        flow0 = self.activation(flow)
 
         return flow0
 
@@ -319,14 +320,13 @@ if __name__ == '__main__':
     # model = IMU_PIPELINE()
     # _ = model(a.float())
 
-
-
-
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     var = RootVariables()
-    f0 = var.root + 'heatmap_testing_images/test_shahid_CoffeeVendingMachine_S1/image_5892.jpg'
-    f1 = var.root + 'heatmap_testing_images/test_shahid_CoffeeVendingMachine_S1/image_5893.jpg'
+    criterion = nn.KLDivLoss(reduction='batchmean')
+    f0 = var.root + 'testing_images/test_sanket_Interaction_S3/image_18345.jpg'
+    f1 = var.root + 'testing_images/test_sanket_Interaction_S3/image_18346.jpg'
+    gt = var.root + 'heatmap_testing_images/test_sanket_Interaction_S3/image_0.jpg'
+
     # frame1 = cv2.imread(f0)
     # frame1 = cv2.resize(frame1, (32, 16))
     # plt.imshow(frame1)
@@ -334,18 +334,32 @@ if __name__ == '__main__':
     t0 = transforms.ToTensor()(Image.open(f0))
     t1 = transforms.ToTensor()(Image.open(f1))
 
+    gt = transforms.ToTensor()(Image.open(gt))
+    gt = gt.unsqueeze(dim=0)
+    act = nn.Softmax2d()
+    gt = act(gt)
+    gt = gt.squeeze(dim=0)
+    print(torch.argmax(gt, dim=1), torch.argmax(gt, dim=0).shape, torch.max(torch.argmax(gt, dim=1)), torch.max(torch.argmax(gt, dim=2)))
+    gt = gt.permute(1, 2, 0)
+    gt = gt.detach().cpu().numpy()
+    # plt.imshow(gt)
+    # plt.show()
+
     # model = VISION_PIPELINE()
-    # print(model)
     # model.eval()
     # t = torch.cat((t0, t1), dim=0)
     # t = t.unsqueeze(dim=0)
     # x = model(t).to(device)
+    # print(x)
+    # loss = criterion(x, gt)
+    # print(loss)
+    # print(loss.shape)
     # print(x.shape)
     # x = x.squeeze(dim=0)
     # x = x.permute(1, 2, 0)
     # x = x.detach().cpu().numpy()
-    # x = cv2.GaussianBlur(x, (0, 0), 10)
-    # x /= np.max(x)  # keep the max to 1
+    # # x = cv2.GaussianBlur(x, (0, 0), 10)
+    # # x /= np.max(x)  # keep the max to 1
     # plt.imshow(x)
     # plt.show()
     # print(x.shape)

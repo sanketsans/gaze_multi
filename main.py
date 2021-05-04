@@ -128,13 +128,13 @@ if __name__ == '__main__':
 #                            trainPD = dist
 
                         total_loss.append(loss.detach().item())
-                        total_correct += pipeline.get_num_correct(pred, labels.float())
-                        total_accuracy = total_correct / num_samples
-                        tqdm_trainLoader.set_description('training: ' + '_loss: {:.4} correct: {} accuracy: {:.3} lr:{}'.format(
-                            np.mean(total_loss), total_correct, 100.0*total_accuracy, optimizer.param_groups[0]['lr']))
+                        # total_correct += pipeline.get_num_correct(pred, labels.float())
+                        # total_accuracy = total_correct / num_samples
+                        tqdm_trainLoader.set_description('training: ' + '_loss: {:.4}'.format(
+                            np.mean(total_loss), optimizer.param_groups[0]['lr']))
 
-                if (epoch+1) % 20 == 0:
-                    scheduler.step()
+                # if (epoch+1) % 20 == 0:
+                #     scheduler.step()
 
                 pipeline.eval()
                 with torch.no_grad():
@@ -170,14 +170,14 @@ if __name__ == '__main__':
 #                            testPD = dist
 
                         total_loss.append(loss.detach().item())
-                        total_correct += pipeline.get_num_correct(pred, labels.float())
-                        dummy_correct += pipeline.get_num_correct(dummy_pts.float(), labels.float())
-                        dummy_accuracy = dummy_correct / num_samples
-                        total_accuracy = total_correct / num_samples
-                        tqdm_testLoader.set_description('testing: ' + '_loss: {:.4} correct: {} accuracy: {:.3} DAcc: {:.4}'.format(
-                            np.mean(total_loss), total_correct, 100.0*total_accuracy,  np.floor(100.0*dummy_accuracy)))
+                        # total_correct += pipeline.get_num_correct(pred, labels.float())
+                        # dummy_correct += pipeline.get_num_correct(dummy_pts.float(), labels.float())
+                        # dummy_accuracy = dummy_correct / num_samples
+                        # total_accuracy = total_correct / num_samples
+                        tqdm_testLoader.set_description('testing: ' + '_loss: {:.4} '.format(
+                            np.mean(total_loss))) #correct: {} accuracy: {:.3} DAcc: {:.4},,,, total_correct, 100.0*total_accuracy,  np.floor(100.0*dummy_accuracy)))
 
-                # tb.add_scalar("Testing Loss", np.mean(total_loss), epoch)
+                tb.add_scalar("Testing Loss", np.mean(total_loss), epoch)
                 # tb.add_scalar("Testing Correct", total_correct, epoch)
                 # tb.add_scalar("Testing Accuracy", total_accuracy, epoch)
                 # tb.add_scalar("Dummy Accuracy", np.floor(100.0*dummy_accuracy), epoch)

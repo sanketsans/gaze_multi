@@ -327,23 +327,28 @@ if __name__ == '__main__':
     f1 = var.root + 'testing_images/test_sanket_Interaction_S3/image_18346.jpg'
     gt = var.root + 'heatmap_testing_images/test_sanket_Interaction_S3/image_0.jpg'
 
+    bgr = var.root + 'testing_images/image_0.jpg'
+    x = Image.open(bgr) #cv2.imread(bgr)
+    plt.imshow(x)
+    plt.show()
+
     # frame1 = cv2.imread(f0)
     # frame1 = cv2.resize(frame1, (32, 16))
     # plt.imshow(frame1)
     # plt.show()
-    t0 = transforms.ToTensor()(Image.open(f0))
-    t1 = transforms.ToTensor()(Image.open(f1))
-
-    gt = transforms.ToTensor()(Image.open(gt))
-    gt = gt.unsqueeze(dim=0)
-    act = nn.Softmax2d()
-    gt = act(gt)
-    gt = gt.squeeze(dim=0)
-    print(torch.argmax(gt, dim=1), torch.argmax(gt, dim=0).shape, torch.max(torch.argmax(gt, dim=1)), torch.max(torch.argmax(gt, dim=2)))
-    gt = gt.permute(1, 2, 0)
-    gt = gt.detach().cpu().numpy()
-    # plt.imshow(gt)
-    # plt.show()
+    # t0 = transforms.ToTensor()(Image.open(f0))
+    # t1 = transforms.ToTensor()(Image.open(f1))
+    #
+    # gt = transforms.ToTensor()(Image.open(gt))
+    # gt = gt.unsqueeze(dim=0)
+    # act = nn.Softmax2d()
+    # gt = act(gt)
+    # gt = gt.squeeze(dim=0)
+    # print(torch.argmax(gt, dim=1), torch.argmax(gt, dim=0).shape, torch.max(torch.argmax(gt, dim=1)), torch.max(torch.argmax(gt, dim=2)))
+    # gt = gt.permute(1, 2, 0)
+    # gt = gt.detach().cpu().numpy()
+    # # plt.imshow(gt)
+    # # plt.show()
 
     # model = VISION_PIPELINE()
     # model.eval()

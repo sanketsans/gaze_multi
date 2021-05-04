@@ -373,7 +373,7 @@ class BUILDING_DATASETS:
                     for i in range(self.frame_count - 300 + 1): ## because we need frame no. 149 to stack with frame 150, to predict for frame no. 150
                         _, frame = self.capture.read()
                         frame = cv2.resize(frame, (512, 288))
-                        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                         path = self.var.root + 'training_images/' + subDir + 'image_' + str(train_frame_index) + '.jpg'
                         cv2.imwrite(path, frame)
                         # self.create_clips(self.capture, train_frame_index, 'training_images')
@@ -394,7 +394,7 @@ class BUILDING_DATASETS:
                     for i in range(self.frame_count - 300 + 1): ## because we need frame no. 149 to stack with frame 150, to predict for frame no. 150
                         _, frame = self.capture.read()
                         frame = cv2.resize(frame, (512, 288)) # (398, 224)
-                        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                         path = self.var.root + 'testing_images/' + subDir + 'image_' + str(test_frame_index) + '.jpg'
                         cv2.imwrite(path, frame)
                         # self.create_clips(self.capture, test_frame_index, 'testing_images')
@@ -418,8 +418,8 @@ if __name__ == "__main__":
 
     # dataframes.load_unified_imu_dataset()
     # dataframes.load_unified_gaze_dataset()
-    # dataframes.load_unified_frame_dataset(reset_dataset=1)
-    dataframes.load_heatmap_dataset(reset_dataset=1)
+    dataframes.load_unified_frame_dataset(reset_dataset=1)
+    # dataframes.load_heatmap_dataset(reset_dataset=1)
 #    dataframes.load_unified_imu_dataset()
 #    dataframes.load_unified_gaze_dataset()
 

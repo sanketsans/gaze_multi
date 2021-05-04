@@ -24,10 +24,10 @@ def create_circular_mask(h, w, center=None, radius=None):
     mask = dist_from_center <= radius
     return mask
 
-def load_heatmap(joints, n_joints, index):
-    joints = cv2.cvtColor(joints, cv2.COLOR_BGR2RGB)[:,:,0]
-    h, w = joints.shape
-    y1 = np.zeros((h, w, n_joints))
+def load_heatmap(img, channels, index):
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)[:,:,0]
+    h, w = img.shape
+    y1 = np.zeros((h, w, channels))
     padding = 40
     mask = None
     trim_size = 150
@@ -55,7 +55,7 @@ def load_heatmap(joints, n_joints, index):
         if mask is None:
             mask = create_circular_mask(h, w, radius=0)
 
-        heatmap = np.zeros(joints.shape)
+        heatmap = np.zeros(img.shape)
         heatmap[mask] = 1.0
         if heatmap.sum() > 0 :
             y2[:, :, 0] = decay_heatmap(heatmap, sigma2=30)
@@ -92,6 +92,7 @@ def decay_heatmap(heatmap, sigma2=10):
 if __name__ == "__main__":
     from PIL import Image
     import torch
+    import torch.nn as nn
     from torchvision import transforms
     from variables import RootVariables
 
@@ -114,18 +115,24 @@ if __name__ == "__main__":
 
     cap.set(cv2.CAP_PROP_POS_FRAMES,150)
     folder = var.root + 'testing_images/'
+    act = nn.Softmax2d()
 
     for i in tqdm(range(frame_count-300)):
         ret, frame = cap.read()
         # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         pts = [0.5, 0.5]
-        heatmapshow = None
+        heatmapshow, y, heatmap = None, None, None
         try:
             frame = cv2.resize(frame, (512, 288))
-
             x = load_heatmap(frame, 1, i)
             heatmapshow = cv2.normalize(x, heatmapshow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
             heatmapshow = cv2.applyColorMap(heatmapshow, cv2.COLORMAP_JET)
+            # heatmap = transforms.ToTensor()(heatmapshow)
+            # heatmap = heatmap.unsqueeze(dim=0)
+            # heatmap = act(heatmap)
+            # heatmap = heatmap.squeeze(dim=0)
+            # heatmap = heatmap.permute(1, 2, 0)
+            # heatmap = heatmap.cpu().numpy()
             # print(torch.argmax(tx, dim=1), torch.argmax(tx, dim=2))
             # coo = list(map(literal_eval, df[i, 1:]))
             # avg = [sum(y) / len(y) for y in zip(*coo)]
@@ -141,7 +148,7 @@ if __name__ == "__main__":
             # frame = cv2.circle(frame, (int(avg[0]*512),int(avg[1]*288)), radius=5, color=(0, 255, 0), thickness=5)
             # frame = cv2.addWeighted(heatmapshow, 0.6, frame, 0.3, 0)
             # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            cv2.imwrite(folder + 'image_' + str(i) + '.jpg', frame)
+            # cv2.imwrite(folder + 'image_' + str(i) + '.jpg', frame)
 
             # frame = cv2.rectangle(frame, start_point, end_point, color=(0, 0, 255), thickness=5)
             # frame = cv2.rectangle(frame, pred_start_point, pred_end_point, color=(0, 255, 0), thickness=5)

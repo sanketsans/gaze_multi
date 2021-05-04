@@ -20,6 +20,7 @@ from create_dataset import All_Dataset
 from torch.utils.tensorboard import SummaryWriter
 #from skimage.transform import rotate
 import random
+from multiprocessing import Process, Pool
 
 def boolean_string(s):
     if s not in {'False', 'True'}:
@@ -35,39 +36,47 @@ if __name__ == '__main__':
     # parser.add_argument('--sepoch', action='store_true', help='Run model in pseudo-fp16 mode (fp16 storage fp32 math).')
     parser.add_argument("--nepoch", type=int, default=15)
     # parser.add_argument("--tfolder", action='store', help='tensorboard_folder name')
-    parser.add_argument("--reset_data", type=int)
+    parser.add_argument("--reset_data", type=int, default=0)
     # parser.add_argument("--reset_tboard", type=boolean_string, default=True)
     parser.add_argument("--model", type=int, choices={0, 1, 2}, help="Model index number, 0 : Signal, 1: Vision, 2 : MultiModal ")
     args = parser.parse_args()
+
+    from torch.multiprocessing import Pool, Process, set_start_method
+    try:
+         set_start_method('spawn')
+    except RuntimeError:
+        pass
+
 
     lastFolder, newFolder = None, None
     All_Dataset = All_Dataset()
     models = All_Models()
     for index, subDir in enumerate(sorted(os.listdir(var.root))):
-        if 'train_shahid' in subDir:
+        if 'train_' in subDir:
             newFolder = subDir
             os.chdir(var.root)
-
-            test_folder = 'test_' + newFolder[6:]
+            test_folder = 'test_sanket_Interaction_S3'
+            # test_folder = 'test_' + newFolder[6:]
             # _ = os.system('mv ' + newFolder + ' test_' + newFolder[6:])
             # if lastFolder is not None:
             #     print('Last folder changed')
             #     _ = os.system('mv test_' + lastFolder[6:] + ' ' + lastFolder)
 
-            print(newFolder, lastFolder)
+            # print(newFolder, lastFolder)
             trim_frame_size = 150
             utils = Helpers(test_folder)
             imu_training, imu_testing, training_target, testing_target = utils.load_datasets(args.reset_data, repeat=0)
 
             pipeline, model_checkpoint = models.get_model(args.model, test_folder)
             # pipeline.tensorboard_folder = args.tfolder
-            optimizer = optim.Adam(pipeline.parameters(), lr=0.00005, amsgrad=True) #, momentum=0.9)
+            optimizer = optim.Adam(pipeline.parameters(), lr=0.000001) #, momentum=0.9)
             lambda1 = lambda epoch: 0.95 ** epoch
             scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda1)
             criterion = nn.KLDivLoss(reduction='batchmean')
-            best_test_loss = 1000.0
+            gt_act = nn.Softmax2d()
+            best_test_loss = -np.inf
             if Path(pipeline.var.root + 'datasets/' + test_folder[5:] + '/' + model_checkpoint).is_file():
-                checkpoint = torch.load(pipeline.var.root + model_checkpoint)
+                checkpoint = torch.load(pipeline.var.root + 'datasets/' + test_folder[5:] + '/' + model_checkpoint)
                 pipeline.load_state_dict(checkpoint['model_state_dict'])
                 optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
                 best_test_acc = checkpoint['best_test_loss']
@@ -76,7 +85,7 @@ if __name__ == '__main__':
 
             os.chdir(pipeline.var.root)
             print(torch.cuda.device_count())
-            best_test_acc = 0.0
+            best_test_loss = 0.0
             for epoch in tqdm(range(args.sepoch, args.nepoch), desc="epochs"):
                 print("Epoch :", epoch)
                 if epoch > 0:
@@ -85,11 +94,11 @@ if __name__ == '__main__':
 
                 # ttraining_target = np.copy(training_target)
                 # timu_training = np.copy(imu_training)
-                trainDataset = All_Dataset.get_dataset('trainImg', imu_training, 'heatmap_trainImg', args.model)
-                trainLoader = torch.utils.data.DataLoader(trainDataset, shuffle=True, batch_size=pipeline.var.batch_size, drop_last=True, num_workers=0)
+                trainDataset = All_Dataset.get_dataset('testImg', imu_training, 'heatmap_testImg', args.model)
+                trainLoader = torch.utils.data.DataLoader(trainDataset, shuffle=True, batch_size=pipeline.var.batch_size, drop_last=True, num_workers=4)
                 tqdm_trainLoader = tqdm(trainLoader)
                 testDataset = All_Dataset.get_dataset('testImg', imu_testing,  'heatmap_testImg', args.model)
-                testLoader = torch.utils.data.DataLoader(testDataset, shuffle=True, batch_size=pipeline.var.batch_size, drop_last=True, num_workers=0)
+                testLoader = torch.utils.data.DataLoader(testDataset, shuffle=True, batch_size=pipeline.var.batch_size, drop_last=True, num_workers=4)
                 tqdm_testLoader = tqdm(testLoader)
 
                 # if epoch == 0 and args.reset_tboard:
@@ -105,11 +114,17 @@ if __name__ == '__main__':
                         pred = pipeline(frame_feat, imu_feat)
                     else:
                         feat, labels = items
-                        pred = pipeline(feat.float())
+                        pred = pipeline(feat.float()).to(device)
 
+                    img = pred[0,:,:,:]
+                    img = img.permute(1, 2, 0)
+                    img = img.detach().cpu().numpy()
+                    plt.imshow(img)
+                    plt.show()
                     num_samples += labels.size(0)
-                    loss = criterion(pred.float(), labels.float())
+                    labels = gt_act(labels)
                     optimizer.zero_grad()
+                    loss = criterion(pred.float(), labels.float())
                     loss.backward()
 #                    print(pred, labels)
                     # pred, labels = pipeline.get_original_coordinates(pred, labels)
@@ -128,7 +143,7 @@ if __name__ == '__main__':
 #                            trainPD = dist
 
                         total_loss.append(loss.detach().item())
-                        # total_correct += pipeline.get_num_correct(pred, labels.float())
+                        # total_correct += pipeline.█get_num_correct(pred, labels.float())
                         # total_accuracy = total_correct / num_samples
                         tqdm_trainLoader.set_description('training: ' + '_loss: {:.4}'.format(
                             np.mean(total_loss), optimizer.param_groups[0]['lr']))
@@ -147,19 +162,19 @@ if __name__ == '__main__':
                     total_loss, total_correct, total_accuracy = [], 0.0, 0.0
                     dummy_correct, dummy_accuracy = 0.0, 0.0
                     for batch_index, items in enumerate(tqdm_testLoader):
-                        dummy_pts = (torch.ones(8, 2) * 0.5).to(device)
-                        dummy_pts[:,0] *= 1920
-                        dummy_pts[:,1] *= 1080
+                        # dummy_pts = (torch.ones(8, 2) * 0.5).to(device)
+                        # dummy_pts[:,0] *= 1920
+                        # dummy_pts[:,1] *= 1080
                         if args.model == 2:
                             frame_feat, imu_feat, labels = items
                             pred = pipeline(frame_feat, imu_feat)
                         else:
                             feat, labels = items
-                            pred = pipeline(feat.float())
+                            pred = pipeline(feat.float()).to(device)
                         num_samples += labels.size(0)
                         # labels = labels[:,0,:]
                         # pred, labels = pipeline.get_original_coordinates(pred, labels)
-
+                        labels = gt_act(labels)
                         loss = criterion(pred.float(), labels.float())
                         # pred, labels = pipeline.get_original_coordinates(pred, labels)
 
@@ -183,15 +198,15 @@ if __name__ == '__main__':
                 # tb.add_scalar("Dummy Accuracy", np.floor(100.0*dummy_accuracy), epoch)
                 # tb.close()
 
-                # if total_accuracy >= best_test_acc:
-                #     best_test_acc = total_accuracy
-                #     torch.save({
-                #                 'epoch': epoch,
-                #                 'model_state_dict': pipeline.state_dict(),
-                #                 'optimizer_state_dict': optimizer.state_dict(),
-                #                 'best_test_acc': best_test_acc,
-                #                 }, pipeline.var.root + 'datasets/' + test_folder[5:] + '/' + model_checkpoint)
-                #     print('Model saved')
+                if np.mean(total_loss) <= best_test_loss:
+                    best_test_loss = np.mean(total_loss)
+                    torch.save({
+                                'epoch': epoch,
+                                'state_dict': pipeline.state_dict(),
+                                'optimizer_state_dict': optimizer.state_dict(),
+                                'best_test_loss': best_test_loss,
+                                }, pipeline.var.root + 'datasets/' + test_folder[5:] + '/' + model_checkpoint)
+                    print('Model saved')
 
 
             lastFolder = newFolder

@@ -29,18 +29,18 @@ class IMU_GAZE_FRAME_DATASET:
             print('saved files does not exis')
             self.imu_train_datasets, self.imu_test_datasets = self.dataset.load_unified_imu_dataset()
             self.gaze_train_datasets, self.gaze_test_datasets = self.dataset.load_unified_gaze_dataset()
-            # np.save(self.var.root + 'datasets/' + test_folder[5:] + '/imuExtracted_training_data' + '.npy', self.imu_train_datasets)
-            # np.save(self.var.root + 'datasets/' + test_folder[5:] + '/gazeExtracted_training_data' + '.npy', self.gaze_train_datasets)
-            # np.save(self.var.root + 'datasets/' + test_folder[5:] + '/imuExtracted_testing_data' + '.npy', self.imu_test_datasets)
-            # np.save(self.var.root + 'datasets/' + test_folder[5:] + '/gazeExtracted_testing_data' + '.npy', self.gaze_test_datasets)
+            np.save(self.var.root + 'datasets/' + test_folder[5:] + '/imuExtracted_training_data' + '.npy', self.imu_train_datasets)
+            np.save(self.var.root + 'datasets/' + test_folder[5:] + '/gazeExtracted_training_data' + '.npy', self.gaze_train_datasets)
+            np.save(self.var.root + 'datasets/' + test_folder[5:] + '/imuExtracted_testing_data' + '.npy', self.imu_test_datasets)
+            np.save(self.var.root + 'datasets/' + test_folder[5:] + '/gazeExtracted_testing_data' + '.npy', self.gaze_test_datasets)
 
         # self.dataset.load_unified_frame_dataset(reset_dataset)
         # self.dataset.load_heatmap_dataset(reset_dataset)
 
-        self.gaze_train_datasets = self.gaze_train_datasets.reshape(-1, 4, self.gaze_train_datasets.shape[-1])
+        # self.gaze_train_datasets = self.gaze_train_datasets.reshape(-1, 4, self.gaze_train_datasets.shape[-1])
         self.imu_train_datasets = self.imu_train_datasets.reshape(-1, 4, self.imu_train_datasets.shape[-1])
         #
-        self.gaze_test_datasets = self.gaze_test_datasets.reshape(-1, 4, self.gaze_test_datasets.shape[-1])
+        # self.gaze_test_datasets = self.gaze_test_datasets.reshape(-1, 4, self.gaze_test_datasets.shape[-1])
         self.imu_test_datasets = self.imu_test_datasets.reshape(-1, 4, self.imu_test_datasets.shape[-1])
 
     def __len__(self):

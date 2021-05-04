@@ -324,11 +324,11 @@ class BUILDING_DATASETS:
 
             dict = {'image_paths': trainpaths}
             df = pd.DataFrame(dict)
-            print()
-            df.to_csv(os.path.dirname(os.path.realpath(__file__)) + '/' + 'heatmap_trainImg.csv')
+            # print(os.path.dirname(os.path.realpath(__file__)))
+            df.to_csv(self.var.root + 'heatmap_trainImg.csv')
             dict = {'image_paths':testpaths}
             df = pd.DataFrame(dict)
-            df.to_csv(os.path.dirname(os.path.realpath(__file__)) + '/' + 'heatmap_testImg.csv')
+            df.to_csv(self.var.root + 'heatmap_testImg.csv')
 
     def create_clips(self, cap, index, type):
         fourcc = cv2.VideoWriter_fourcc(*'MPEG')
@@ -405,10 +405,10 @@ class BUILDING_DATASETS:
             os.chdir(self.var.root)
             dict = {'image_paths': trainpaths}
             df = pd.DataFrame(dict)
-            df.to_csv(os.path.dirname(os.path.realpath(__file__)) + '/trainImg.csv')
+            df.to_csv(self.var.root + '/trainImg.csv')
             dict = {'image_paths':testpaths}
             df = pd.DataFrame(dict)
-            df.to_csv(os.path.dirname(os.path.realpath(__file__)) + '/testImg.csv')
+            df.to_csv(self.var.root + '/testImg.csv')
 
 if __name__ == "__main__":
     var = RootVariables()

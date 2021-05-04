@@ -10,12 +10,14 @@ def conv(batchNorm, in_planes, out_planes, kernel_size=3, stride=1, padding=None
         return nn.Sequential(
             nn.Conv2d(in_planes, out_planes, kernel_size=kernel_size, stride=stride, padding=padding, bias=False),
             nn.BatchNorm2d(out_planes),
-            nn.LeakyReLU(0.1,inplace=True)
+            nn.ReLU()
+            # nn.LeakyReLU(0.1,inplace=True)
         )
     else:
         return nn.Sequential(
             nn.Conv2d(in_planes, out_planes, kernel_size=kernel_size, stride=stride, padding=padding, bias=True),
-            nn.LeakyReLU(0.1,inplace=True)
+            # nn.LeakyReLU(0.1,inplace=True)
+            nn.ReLU()
         )
 
 def i_conv(batchNorm, in_planes, out_planes, kernel_size=3, stride=1, bias = True):
@@ -35,7 +37,8 @@ def predict_flow(in_planes, channels=2):
 def deconv(in_planes, out_planes, kernel_size=4, stride=2, padding=1):
     return nn.Sequential(
         nn.ConvTranspose2d(in_planes, out_planes, kernel_size=kernel_size, stride=stride, padding=padding, bias=True),
-        nn.LeakyReLU(0.1,inplace=True)
+        # nn.LeakyReLU(0.1,inplace=True)
+        nn.ReLU()
     )
 
 class tofp16(nn.Module):

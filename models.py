@@ -12,25 +12,26 @@ from submodules import *
 class All_Models:
     def __init__(self):
         print("Setting up all models .. ")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def get_model(self, model_index, test_folder):
         if model_index == 0:
-            return IMU_PIPELINE(), 'signal_checkpoint_' + test_folder[5:] + '.pth'
+            return IMU_PIPELINE().to(self.device), 'signal_checkpoint_' + test_folder[5:] + '.pth'
         elif model_index == 1:
-            return VISION_PIPELINE(vision_model_depth), 'vision_checkpoint_' + test_folder[5:] + '.pth'
+            return VISION_PIPELINE().to(self.device), 'vision_checkpoint_' + test_folder[5:] + '.pth'
         elif model_index == 2:
-            return FusionPipeline(vision_model_depth, test_folder), 'pipeline_checkpoint_' + test_folder[5:] + '.pth'
+            return FusionPipeline(test_folder), 'pipeline_checkpoint_' + test_folder[5:] + '.pth'
 
 class VISION_PIPELINE(nn.Module):
     def __init__(self):
         super(VISION_PIPELINE, self).__init__()
         self.var = RootVariables()
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
         torch.manual_seed(1)
         self.input_channels = 6
         self.batchNorm = False
         self.net = FlowNetS.FlowNetS(input_channels=self.input_channels, batchNorm=False)
-        dict = torch.load(self.var.root + 'FlowNet2-S_checkpoint.pth.tar', map_location="cpu")
+        dict = torch.load(self.var.root + 'FlowNet2-S_checkpoint.pth.tar')
         self.net.load_state_dict(dict["state_dict"])
         self.net = self.net = nn.Sequential(*list(self.net.children()))
         self.conv1 = self.net[0]
@@ -58,6 +59,7 @@ class VISION_PIPELINE(nn.Module):
         self.predict_flow2 = predict_flow(192)
         self.predict_flow1 = predict_flow(96)
         self.predict_flow0 = predict_flow(6, channels=3)
+        self.out_conv = conv(self.batchNorm, 3, 3)
 
         self.upsampled_flow6_to_5 = self.net[19]
         self.upsampled_flow5_to_4 = self.net[20]
@@ -114,6 +116,7 @@ class VISION_PIPELINE(nn.Module):
         out_deconv0 = self.deconv0(concat1)
 
         flow = self.predict_flow0(out_deconv0)
+        flow = self.out_conv(flow)
         flow0 = self.activation(flow)
 
         return flow0
@@ -323,14 +326,16 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     var = RootVariables()
     criterion = nn.KLDivLoss(reduction='batchmean')
-    f0 = var.root + 'testing_images/test_sanket_Interaction_S3/image_18345.jpg'
-    f1 = var.root + 'testing_images/test_sanket_Interaction_S3/image_18346.jpg'
+    f0 = var.root + 'testing_images/test_sanket_Interaction_S3/image_0.jpg'
+    f1 = var.root + 'testing_images/test_sanket_Interaction_S3/image_1.jpg'
+    t0 = transforms.ToTensor()(Image.open(f0))
+    t1 = transforms.ToTensor()(Image.open(f1))
     gt = var.root + 'heatmap_testing_images/test_sanket_Interaction_S3/image_0.jpg'
 
-    bgr = var.root + 'testing_images/image_0.jpg'
+    bgr = var.root + 'testing_images/test_sanket_Interaction_S3/image_0.jpg'
     x = Image.open(bgr) #cv2.imread(bgr)
-    plt.imshow(x)
-    plt.show()
+    # plt.imshow(x)
+    # plt.show()
 
     # frame1 = cv2.imread(f0)
     # frame1 = cv2.resize(frame1, (32, 16))
@@ -350,23 +355,22 @@ if __name__ == '__main__':
     # # plt.imshow(gt)
     # # plt.show()
 
-    # model = VISION_PIPELINE()
-    # model.eval()
-    # t = torch.cat((t0, t1), dim=0)
-    # t = t.unsqueeze(dim=0)
-    # x = model(t).to(device)
-    # print(x)
+    model = VISION_PIPELINE().to(device)
+    model.eval()
+    t = torch.cat((t0, t1), dim=0)
+    t = t.unsqueeze(dim=0).to(device)
+    x = model(t).to(device)
     # loss = criterion(x, gt)
     # print(loss)
     # print(loss.shape)
     # print(x.shape)
-    # x = x.squeeze(dim=0)
-    # x = x.permute(1, 2, 0)
-    # x = x.detach().cpu().numpy()
+    x = x.squeeze(dim=0)
+    x = x.permute(1, 2, 0)
+    x = x.detach().cpu().numpy()
     # # x = cv2.GaussianBlur(x, (0, 0), 10)
     # # x /= np.max(x)  # keep the max to 1
-    # plt.imshow(x)
-    # plt.show()
+    plt.imshow(x)
+    plt.show()
     # print(x.shape)
     # mag, ang = cv2.cartToPolar(x[...,0], x[...,1])
     #

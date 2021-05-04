@@ -55,8 +55,7 @@ class All_Dataset:
             assert len(self.heat_imgs_path) == len(self.indexes)
 
             self.transforms = transforms.Compose([
-                                            transforms.ToTensor(),
-                                            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+                                            transforms.ToTensor()])
 
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -74,12 +73,12 @@ class All_Dataset:
     class VIS_FINAL_DATASET(Dataset):
         def __init__(self, original_img_csv, heatmap_img_csv):
             self.indexes = []
+            self.var = RootVariables()
             # os.path.dirname(os.path.realpath(__file__))
-            self.gt_act = nn.Softmax2d()
-            self.ori_imgs_path = pd.read_csv(os.path.dirname(os.path.realpath(__file__)) + '/' + original_img_csv + '.csv')
-            self.heat_imgs_path = pd.read_csv(os.path.dirname(os.path.realpath(__file__)) + '/' + heatmap_img_csv + '.csv')
+            self.ori_imgs_path = pd.read_csv(self.var.root + original_img_csv + '.csv')
+            self.heat_imgs_path = pd.read_csv(self.var.root + heatmap_img_csv + '.csv')
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            name_index = 6 if len(self.ori_imgs_path.iloc[0, 1].split('/')) > 7 else 3
+            name_index = 6 if len(self.ori_imgs_path.iloc[0, 1].split('/')) > 7 else 4
             subfolder = self.ori_imgs_path.iloc[0, 1].split('/')[name_index]
             f_index = 0
             for index in range(len(self.heat_imgs_path)):
@@ -106,10 +105,12 @@ class All_Dataset:
             f_index = self.indexes[index]
             ##Imgs
             for i in range(f_index, f_index-2, -1):
+                # print(self.ori_imgs_path.iloc[i, 1])
                 img = torch.cat((img, self.transforms(Image.open(self.ori_imgs_path.iloc[i, 1]))), 0) if i < f_index else self.transforms(Image.open(self.ori_imgs_path.iloc[i, 1]))
                 # img = torch.cat((img, self.transforms(Image.open(self.ori_imgs_path.iloc[i, 1])).unsqueeze(dim=3)), axis=3) if i < f_index else self.transforms(Image.open(self.ori_imgs_path.iloc[i, 1])).unsqueeze(dim=3)
-
-            return (img).to(self.device), self.act(transforms.ToTensor()(Image.open(self.heat_imgs_path.iloc[index, 1]))).to(self.device)
+            # print(self.heat_imgs_path.iloc[index, 1])
+            # print('\n')
+            return (img).to(self.device), (transforms.ToTensor()(Image.open(self.heat_imgs_path.iloc[index, 1]))).to(self.device)
 
     class SIG_FINAL_DATASET(Dataset):
         def __init__(self, imu_feat, heatmap_img_csv):
@@ -141,14 +142,10 @@ class All_Dataset:
 if __name__ =='__main__':
     var = RootVariables()
     alld = All_Dataset()
-    test_folder = 'test_CoffeeVendingMachine_S1​'
-    utils = Helpers(test_folder)
-    imu_training, imu_testing, training_target, testing_target = utils.load_datasets(reset_dataset=0, repeat=1)
 
     os.chdir(var.root)
     v = alld.VIS_FINAL_DATASET('trainImg', 'heatmap_trainImg')
-    o, g = v[0]
-    print(o.shape, g.shape)
+    print(v[5998])
 
     # dataframes = BUILDING_DATASETS('train_Lift_S1')
     # #

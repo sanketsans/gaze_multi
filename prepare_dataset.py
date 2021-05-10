@@ -37,11 +37,11 @@ class IMU_GAZE_FRAME_DATASET:
         # self.dataset.load_unified_frame_dataset(reset_dataset)
         # self.dataset.load_heatmap_dataset(reset_dataset)
 
-        # self.gaze_train_datasets = self.gaze_train_datasets.reshape(-1, 4, self.gaze_train_datasets.shape[-1])
+        self.gaze_train_datasets = self.gaze_train_datasets.reshape(-1, 4, self.gaze_train_datasets.shape[-1])
         self.imu_train_datasets = self.imu_train_datasets.reshape(-1, 4, self.imu_train_datasets.shape[-1])
         #
         # self.gaze_test_datasets = self.gaze_test_datasets.reshape(-1, 4, self.gaze_test_datasets.shape[-1])
-        self.imu_test_datasets = self.imu_test_datasets.reshape(-1, 4, self.imu_test_datasets.shape[-1])
+        # self.imu_test_datasets = self.imu_test_datasets.reshape(-1, 4, self.imu_test_datasets.shape[-1])
 
     def __len__(self):
         return int(len(self.gaze_train_datasets))      ## number of frames corresponding to
@@ -49,7 +49,7 @@ class IMU_GAZE_FRAME_DATASET:
 if __name__ =="__main__":
     var = RootVariables()
     device = torch.device("cpu")
-    trim_size = 150
+    trim_size = var.trim_frame_size
     frame_size = 256
     datasets = IMU_GAZE_FRAME_DATASET(var.root, frame_size, trim_size)
     train_imu_dataset = datasets.imu_train_datasets

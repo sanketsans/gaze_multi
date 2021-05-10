@@ -35,7 +35,7 @@ class All_Dataset:
             self.heat_imgs_path = pd.read_csv(os.path.dirname(os.path.realpath(__file__)) + '/' + heatmap_img_csv + '.csv')
             name_index = 6 if len(self.ori_imgs_path.iloc[0, 1].split('/')) > 4 else 3
             subfolder = self.ori_imgs_path.iloc[0, 1].split('/')[name_index]
-            f_index = 0
+            f_index = 3 #0
             for index in range(len(self.heat_imgs_path)):
                 imu_check = np.isnan(imu_feat[index])
                 if imu_check.any():
@@ -45,7 +45,7 @@ class All_Dataset:
                     if self.ori_imgs_path.iloc[f_index, 1].split('/')[name_index] == subfolder:
                         self.indexes.append(f_index)
                     else:
-                        f_index += 1
+                        f_index += 4 #1
                         self.indexes.append(f_index)
                         subfolder = self.ori_imgs_path.iloc[f_index, 1].split('/')[name_index]
 
@@ -65,7 +65,7 @@ class All_Dataset:
         def __getitem__(self, index):
             f_index = self.indexes[index]
             ##Imgs
-            for i in range(f_index, f_index-2, -1):
+            for i in range(f_index, f_index-5, -1):
                 img = torch.cat((img, self.transforms(Image.open(self.ori_imgs_path.iloc[i, 1])).unsqueeze(dim=3)), axis=3) if i < f_index else self.transforms(Image.open(self.ori_imgs_path.iloc[i, 1])).unsqueeze(dim=3)
 
             return (img).to("cuda:0"), torch.from_numpy(self.imu_data[index]).to(self.device), transforms.ToTensor()(Image.open(self.heat_imgs_path.iloc[f_index, 1])).to(self.device)
@@ -80,19 +80,18 @@ class All_Dataset:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             name_index = 6 if len(self.ori_imgs_path.iloc[0, 1].split('/')) > 7 else 4
             subfolder = self.ori_imgs_path.iloc[0, 1].split('/')[name_index]
-            f_index = 0
+            f_index = 3 #0
             for index in range(len(self.heat_imgs_path)):
                 f_index += 1
                 if self.ori_imgs_path.iloc[f_index, 1].split('/')[name_index] == subfolder:
                     self.indexes.append(f_index)
                 else:
-                    f_index += 1
+                    f_index += 4#1
                     self.indexes.append(f_index)
                     subfolder = self.ori_imgs_path.iloc[f_index, 1].split('/')[name_index]
 
             self.transforms = transforms.Compose([
-                                            transforms.ToTensor(),
-                                            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+                                            transforms.ToTensor()])
 
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -104,9 +103,9 @@ class All_Dataset:
         def __getitem__(self, index):
             f_index = self.indexes[index]
             ##Imgs
-            for i in range(f_index, f_index-2, -1):
-                # print(self.ori_imgs_path.iloc[i, 1])
-                img = torch.cat((img, self.transforms(Image.open(self.ori_imgs_path.iloc[i, 1]))), 0) if i < f_index else self.transforms(Image.open(self.ori_imgs_path.iloc[i, 1]))
+            for i in range(f_index, f_index-5, -1):
+                # print(self.ori_imgs_path.iloc[i, 1], f_index)
+                img = torch.cat((img, self.transforms(Image.open(self.ori_imgs_path.iloc[i, 1])).unsqueeze(dim=1)), 1) if i < f_index else self.transforms(Image.open(self.ori_imgs_path.iloc[i, 1])).unsqueeze(dim=1)
                 # img = torch.cat((img, self.transforms(Image.open(self.ori_imgs_path.iloc[i, 1])).unsqueeze(dim=3)), axis=3) if i < f_index else self.transforms(Image.open(self.ori_imgs_path.iloc[i, 1])).unsqueeze(dim=3)
             # print(self.heat_imgs_path.iloc[index, 1])
             # print('\n')
@@ -145,7 +144,7 @@ if __name__ =='__main__':
 
     os.chdir(var.root)
     v = alld.VIS_FINAL_DATASET('trainImg', 'heatmap_trainImg')
-    print(v[5998])
+    print(v[5])
 
     # dataframes = BUILDING_DATASETS('train_Lift_S1')
     # #

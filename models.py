@@ -5,7 +5,8 @@ import torch.nn.functional as F
 from torchvision import transforms
 sys.path.append('../')
 from variables import RootVariables
-from flownet2pytorch.networks import FlowNetS
+# from flownet2pytorch.networks import FlowNetS
+from ResNets3DPyTorch.models import resnet2p1d, resnet
 from submodules import *
 #from skimage.transform import rotate
 
@@ -22,7 +23,7 @@ class All_Models:
         elif model_index == 2:
             return FusionPipeline(test_folder), 'pipeline_checkpoint_' + test_folder[5:] + '.pth'
 
-class VISION_PIPELINE(nn.Module):
+class exVis_PIPELINE(nn.Module):
     def __init__(self):
         super(VISION_PIPELINE, self).__init__()
         self.var = RootVariables()
@@ -33,7 +34,7 @@ class VISION_PIPELINE(nn.Module):
         self.net = FlowNetS.FlowNetS(input_channels=self.input_channels, batchNorm=False)
         dict = torch.load(self.var.root + 'FlowNet2-S_checkpoint.pth.tar')
         self.net.load_state_dict(dict["state_dict"])
-        self.net = self.net = nn.Sequential(*list(self.net.children()))
+        self.net = nn.Sequential(*list(self.net.children()))
         self.conv1 = self.net[0]
         self.conv2 = self.net[1]
         self.conv3 = self.net[2]
@@ -191,7 +192,7 @@ class FusionPipeline(nn.Module):
         self.activation = nn.Sigmoid()
         self.temporalSeq = 32
         self.temporalSize = 16
-        self.trim_frame_size = 150
+        self.trim_frame_size = self.var.trim_frame_size
         self.imuCheckpoint_file = 'signal_checkpoint0_' + test_folder[5:] + '.pth'
         self.frameCheckpoint_file = 'vision_checkpointAdam9CNN_' + test_folder[5:] +'.pth'
         self.orig_tensor = torch.tensor([3.75, 2.8125]).to(self.device)
@@ -302,6 +303,40 @@ class VIS_ENCODER(nn.Module):
 
         return out
 
+class VISION_PIPELINE(nn.Module):
+    def __init__(self):
+        super(VISION_PIPELINE, self).__init__()
+        self.var = RootVariables()
+        self.BasicBlock = resnet2p1d.BasicBlock
+        self.get_inplanes = resnet2p1d.get_inplanes()
+        # self.net = resnet.generate_model(18)
+        self.net = resnet2p1d.ResNet(self.BasicBlock, [2, 2, 2, 2], self.get_inplanes)
+
+        dict = torch.load(self.var.root + 'r2p1d18_K_200ep.pth')
+        self.net.load_state_dict(dict["state_dict"])
+        self.net = nn.Sequential(*list(self.net.children()))[0:10]
+        self.deconv0 = deconv(512, 256, kernel_size=4, stride=2)
+        self.deconv1 = deconv(256, 128, kernel_size=4, stride=2)
+        self.deconv2 = deconv(128, 64, kernel_size=4, stride=2)
+        self.deconv3 = deconv(64, 32, kernel_size=4, stride=2)
+        self.deconv4 = deconv(32, 3, kernel_size=4, stride=2)
+        self.activation = nn.Softmax2d()
+        self.tensorboard_folder = 'sample_tensorboard'
+
+    def forward(self, input):
+        out = self.net(input)
+        out = out.squeeze(dim=2)
+        out = self.deconv0(out)
+        out = self.deconv1(out)
+        out = self.deconv2(out)
+        out = self.deconv3(out)
+        out = self.deconv4(out)
+        # print(out)
+        out = self.activation(out)
+        return out
+
+
+
 if __name__ == '__main__':
     from torchvision import transforms
     from PIL import Image
@@ -326,14 +361,40 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     var = RootVariables()
     criterion = nn.KLDivLoss(reduction='batchmean')
-    f0 = var.root + 'testing_images/test_sanket_Interaction_S3/image_0.jpg'
-    f1 = var.root + 'testing_images/test_sanket_Interaction_S3/image_1.jpg'
-    t0 = transforms.ToTensor()(Image.open(f0))
-    t1 = transforms.ToTensor()(Image.open(f1))
-    gt = var.root + 'heatmap_testing_images/test_sanket_Interaction_S3/image_0.jpg'
+    f0 = var.root + 'training_images/train_sanket_washands_S1/image_0.jpg'
+    f1 = var.root + 'training_images/train_sanket_washands_S1/image_1.jpg'
+    f2 = var.root + 'training_images/train_sanket_washands_S1/image_2.jpg'
+    f3 = var.root + 'training_images/train_sanket_washands_S1/image_3.jpg'
+    f4 = var.root + 'training_images/train_sanket_washands_S1/image_4.jpg'
 
-    bgr = var.root + 'testing_images/test_sanket_Interaction_S3/image_0.jpg'
-    x = Image.open(bgr) #cv2.imread(bgr)
+    t0 = transforms.ToTensor()(Image.open(f0)).unsqueeze(dim=1)
+    t1 = transforms.ToTensor()(Image.open(f1)).unsqueeze(dim=1)
+    t2 = transforms.ToTensor()(Image.open(f2)).unsqueeze(dim=1)
+    t3 = transforms.ToTensor()(Image.open(f3)).unsqueeze(dim=1)
+    t4 = transforms.ToTensor()(Image.open(f4)).unsqueeze(dim=1)
+    t0 = torch.cat((t0, t1), dim=1)
+    t0 = torch.cat((t0, t2), dim=1)
+    t0 = torch.cat((t0, t2), dim=1)
+    t0 = torch.cat((t0, t4), dim=1)
+    #
+    t0 = t0.unsqueeze(dim=0)
+    print(t0.shape)
+    #
+    model = VISION_PIPELINE()
+    x = model(t0)
+    print(x.shape)
+
+    t0 = var.root + 'heatmap_training_images/train_sanket_washands_S1/image_0.jpg'
+    t0 = transforms.ToTensor()(Image.open(t0)).unsqueeze(dim=0)
+    print(t0.shape)
+    print(torch.sum(nn.Softmax2d()(t0)))
+    # t0 = torch.cat((t0, t1), )
+
+    # for i in range(5):
+    #     final = torch.cat((final, ))
+    # gt = var.root + 'heatmap_testing_images/test_sanket_Interaction_S3/image_0.jpg'
+    #
+    # bgr = var.root + 'testing_images/test_sanket_Interaction_S3/image_0.jpg'
     # plt.imshow(x)
     # plt.show()
 
@@ -355,22 +416,23 @@ if __name__ == '__main__':
     # # plt.imshow(gt)
     # # plt.show()
 
-    model = VISION_PIPELINE().to(device)
-    model.eval()
-    t = torch.cat((t0, t1), dim=0)
-    t = t.unsqueeze(dim=0).to(device)
-    x = model(t).to(device)
-    # loss = criterion(x, gt)
-    # print(loss)
-    # print(loss.shape)
-    # print(x.shape)
-    x = x.squeeze(dim=0)
-    x = x.permute(1, 2, 0)
-    x = x.detach().cpu().numpy()
-    # # x = cv2.GaussianBlur(x, (0, 0), 10)
-    # # x /= np.max(x)  # keep the max to 1
-    plt.imshow(x)
-    plt.show()
+    # model = VISION_PIPELINE().to(device)
+    # model.eval()
+    # t = torch.cat((t0, t1), dim=0)
+    # t = t.unsqueeze(dim=0).to(device)
+    # x = model(t).to(device)
+    # # loss = criterion(x, gt)
+    # # print(loss)
+    # # print(loss.shape)
+    # # print(x.shape)
+    # x = x.squeeze(dim=0)
+    # x = x.permute(1, 2, 0)
+    # x = x.detach().cpu().numpy()
+    # # # x = cv2.GaussianBlur(x, (0, 0), 10)
+    # # # x /= np.max(x)  # keep the max to 1
+    # plt.imshow(x)
+    # plt.show()
+
     # print(x.shape)
     # mag, ang = cv2.cartToPolar(x[...,0], x[...,1])
     #

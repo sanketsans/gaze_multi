@@ -25,10 +25,10 @@ class RootVariables:
         # self.root = '/home/sanketthakur/Downloads/Pavis_Social_Interaction_Attention_dataset/'
         self.imu_input_size = 6
         self.frame_input_channel = 6
-        self.batch_size = 1
+        self.batch_size = 8
         self.hidden_size = 256
         self.num_classes = 256
-        self.trim_frame_size = 150
+        self.trim_frame_size = 50 #150
         self.num_layers = 2
         self.test_folder = ''
 

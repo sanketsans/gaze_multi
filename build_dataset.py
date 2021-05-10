@@ -57,7 +57,7 @@ class BUILDING_DATASETS:
         print('Building gaze dataset ..')
         tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
         for index, subDir in enumerate(tqdmloader):
-            if 'train_' in subDir:
+            if 'washands' in subDir:
                 tqdmloader.set_description('Train folder: {}'.format(subDir))
                 self.temp = self.populate_gaze_data(subDir)
                 self.train_folders_num += 1
@@ -109,7 +109,7 @@ class BUILDING_DATASETS:
         print('Building IMU dataset ..')
         tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
         for index, subDir in enumerate(tqdmloader):
-            if 'train_' in subDir :
+            if 'washands' in subDir :
                 tqdmloader.set_description('Train folder: {}'.format(subDir))
                 self.temp = self.populate_imu_data(subDir)
                 self.train_folders_num += 1
@@ -170,13 +170,12 @@ class BUILDING_DATASETS:
         mask = dist_from_center <= radius
         return mask
 
-    def load_heatmap(self, joints, n_joints, index):
+    def load_heatmap(self, joints, n_joints, trim_size, index):
         joints = cv2.cvtColor(joints, cv2.COLOR_BGR2RGB)[:,:,0]
         h, w = joints.shape
         y1 = np.zeros((h, w, n_joints))
         padding = 40
         mask = None
-        trim_size = 150
         # x, y, = int(coordinates[0]*512), int(coordinates[1]*288)
         for j in range(5):
             y2 = np.copy(y1)
@@ -221,28 +220,28 @@ class BUILDING_DATASETS:
             Heatmap obtained by gaussian-blurring the input
         """
         heatmap = cv2.GaussianBlur(heatmap, (0, 0), sigma2)
-        heatmap /= np.sum(heatmap)
+        # heatmap /= np.sum(heatmap)
         # heatmap /= np.max(heatmap)  # keep the max to 1
         return heatmap
 
     def load_heatmap_dataset(self, reset_dataset=0):
         ## INCLUDES THE LAST FRAME
         if reset_dataset == 1:
-            print('Deleting the old dataset .. ')
-            _ = os.system('rm ' + os.path.dirname(os.path.realpath(__file__)) + '/' + 'heatmap_trainImg.csv')
-            _ = os.system('rm ' + os.path.dirname(os.path.realpath(__file__)) + '/' + 'heatmap_testImg.csv')
-
-            _ = os.system('rm -r ' + self.var.root + 'heatmap_training_images')
-            _ = os.system('rm -r ' + self.var.root + 'heatmap_testing_images')
-
-            _ = os.system('mkdir ' + self.var.root + 'heatmap_training_images')
-            _ = os.system('mkdir ' + self.var.root + 'heatmap_testing_images')
+            # print('Deleting the old dataset .. ')
+            # _ = os.system('rm ' + os.path.dirname(os.path.realpath(__file__)) + '/' + 'heatmap_trainImg.csv')
+            # _ = os.system('rm ' + os.path.dirname(os.path.realpath(__file__)) + '/' + 'heatmap_testImg.csv')
+            #
+            # _ = os.system('rm -r ' + self.var.root + 'heatmap_training_images')
+            # _ = os.system('rm -r ' + self.var.root + 'heatmap_testing_images')
+            #
+            # _ = os.system('mkdir ' + self.var.root + 'heatmap_training_images')
+            # _ = os.system('mkdir ' + self.var.root + 'heatmap_testing_images')
             train_frame_index, test_frame_index = 0, 0
             trainpaths, testpaths = [], []
             print("Building heatmap dataset ..")
             tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
             for index, subDir in enumerate(tqdmloader):
-                if 'train_' in subDir :
+                if 'washands' in subDir :
                     tqdmloader.set_description('Train folder: {}'.format(subDir))
                     _ = os.system('mkdir ' + self.var.root + 'heatmap_training_images/' + subDir)
                     total_frames = 0
@@ -261,12 +260,12 @@ class BUILDING_DATASETS:
                                     self.df[i][j] = '(0.0, 0.0)'
 
                     self.capture.set(cv2.CAP_PROP_POS_FRAMES,self.var.trim_frame_size)
-                    for i in range(self.frame_count - 300):
+                    for i in range(self.frame_count - 100):
                         _, frame = self.capture.read()
                         frame = cv2.resize(frame, (512, 288))
                         heatmapshow = None
                         try:
-                            x = self.load_heatmap(frame, 1, i)
+                            x = self.load_heatmap(frame, 1, self.var.trim_frame_size, i+4)
                             heatmapshow = cv2.normalize(x, heatmapshow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
                             heatmapshow = cv2.applyColorMap(heatmapshow, cv2.COLORMAP_JET)
                             # frame = cv2.addWeighted(heatmapshow, 0.5, frame, 0.7, 0)
@@ -303,12 +302,12 @@ class BUILDING_DATASETS:
                                     self.df[i][j] = '(0.0, 0.0)'
 
                     self.capture.set(cv2.CAP_PROP_POS_FRAMES,self.var.trim_frame_size)
-                    for i in range(self.frame_count - 300): ## because we need frame no. 149 to stack with frame 150, to predict for frame no. 150
+                    for i in range(self.frame_count - 100): ## because we need frame no. 149 to stack with frame 150, to predict for frame no. 150
                         _, frame = self.capture.read()
                         frame = cv2.resize(frame, (512, 288)) # (398, 224)
                         heatmapshow = None
                         try:
-                            x = self.load_heatmap(frame, 1, i)
+                            x = self.load_heatmap(frame, 1, self.var.trim_frame_size, i+4)
                             heatmapshow = cv2.normalize(x, heatmapshow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
                             heatmapshow = cv2.applyColorMap(heatmapshow, cv2.COLORMAP_JET)
                             # frame = cv2.addWeighted(heatmapshow, 0.5, frame, 0.7, 0)
@@ -343,25 +342,26 @@ class BUILDING_DATASETS:
             chunks = torch.cat((chunks, frame), axis=3) if i > 0 else frame
             out.write(frame)
 
-        cap.set(cv2.CAP_PROP_POS_FRAMES,150+index-4)
+        cap.set(cv2.CAP_PROP_POS_FRAMES,50+index-4)
         out.release()
 
     def load_unified_frame_dataset(self, reset_dataset=0):
         ## INCLUDES THE LAST FRAME
         if reset_dataset == 1:
-            print('Deleting the old dataset .. ')
-            _ = os.system('rm -r ' + self.var.root + 'training_images')
-            _ = os.system('rm -r ' + self.var.root + 'testing_images')
-
-            _ = os.system('mkdir ' + self.var.root + 'training_images')
-            _ = os.system('mkdir ' + self.var.root + 'testing_images')
+            # print('Deleting the old dataset .. ')
+            # _ = os.system('rm -r ' + self.var.root + 'training_images')
+            # _ = os.system('rm -r ' + self.var.root + 'testing_images')
+            #
+            # _ = os.system('mkdir ' + self.var.root + 'training_images')
+            # _ = os.system('mkdir ' + self.var.root + 'testing_images')
             train_frame_index, test_frame_index = 0, 0
             trainpaths, testpaths = [], []
             print("Building Image dataset ..")
             tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
             for index, subDir in enumerate(tqdmloader):
-                if 'train_' in subDir :
+                if 'washands' in subDir :
                     tqdmloader.set_description('Train folder: {}'.format(subDir))
+                    _ = os.system('rm -r ' + self.var.root + 'training_images/' + subDir)
                     _ = os.system('mkdir ' + self.var.root + 'training_images/' + subDir)
                     total_frames = 0
                     subDir  = subDir + '/' if subDir[-1]!='/' else  subDir
@@ -370,7 +370,7 @@ class BUILDING_DATASETS:
                     self.frame_count = int(self.capture.get(cv2.CAP_PROP_FRAME_COUNT))
 
                     self.capture.set(cv2.CAP_PROP_POS_FRAMES,self.var.trim_frame_size - 1)
-                    for i in range(self.frame_count - 300 + 1): ## because we need frame no. 149 to stack with frame 150, to predict for frame no. 150
+                    for i in range(self.frame_count - 100 + 4): ## because we need frame no. 149 to stack with frame 150, to predict for frame no. 150
                         _, frame = self.capture.read()
                         frame = cv2.resize(frame, (512, 288))
                         # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -391,7 +391,7 @@ class BUILDING_DATASETS:
 #                       _ = os.system('rm ' + str(self.var.frame_size) + '_framesExtracted_data_' + str(self.var.trim_frame_size) + '.npy')
 
                     self.capture.set(cv2.CAP_PROP_POS_FRAMES,self.var.trim_frame_size - 1)
-                    for i in range(self.frame_count - 300 + 1): ## because we need frame no. 149 to stack with frame 150, to predict for frame no. 150
+                    for i in range(self.frame_count - 100 + 4): ## because we need frame no. 149 to stack with frame 150, to predict for frame no. 150
                         _, frame = self.capture.read()
                         frame = cv2.resize(frame, (512, 288)) # (398, 224)
                         # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -418,10 +418,10 @@ if __name__ == "__main__":
 
     # dataframes.load_unified_imu_dataset()
     # dataframes.load_unified_gaze_dataset()
+    dataframes.load_unified_imu_dataset()
+    dataframes.load_unified_gaze_dataset()
     dataframes.load_unified_frame_dataset(reset_dataset=1)
-    # dataframes.load_heatmap_dataset(reset_dataset=1)
-#    dataframes.load_unified_imu_dataset()
-#    dataframes.load_unified_gaze_dataset()
+    dataframes.load_heatmap_dataset(reset_dataset=1)
 
     # trainIMU, testIMU = dataframes.load_unified_imu_dataset()
     # imu_datas= dataframes.load_unified_imu_dataset()

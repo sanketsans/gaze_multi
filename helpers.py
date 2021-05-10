@@ -14,7 +14,7 @@ class ALIGN_DATASET(Dataset):
         checkedLast = False
         for i in range(len(self.gaze_data)): #-1
             index = i #+ 1
-            imu_index = 75 + index
+            imu_index = 25 + index
             catIMUData = self.imu_data[imu_index-15]
             for i in range(15):#15
                 catIMUData = np.concatenate((catIMUData, self.imu_data[imu_index-3+i]), axis=0)
@@ -166,7 +166,7 @@ class Helpers:
 
         else:
             for index, subDir in enumerate(sorted(os.listdir(self.var.root))):
-                if 'train_' in subDir:
+                if 'washands' in subDir:
                     if toggle != 1:
                         toggle = 1
                         self.gaze_start_index, self.imu_start_index = 0, 0

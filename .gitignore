@@ -3,3 +3,4 @@
 *.csv
 ./.git/
 ./flownet2pytorch/
+./3DResNetsPytorch

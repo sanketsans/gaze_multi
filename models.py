@@ -381,13 +381,27 @@ if __name__ == '__main__':
     print(t0.shape)
     #
     model = VISION_PIPELINE()
+    test_folder = 'train_sanket_washands_S1'
+    model_checkpoint = 'vision_checkpoint_' + test_folder[5:] + '.pth'
+    checkpoint = torch.load(model.var.root + 'datasets/' + test_folder[5:] + '/' + model_checkpoint)
+    model.load_state_dict(checkpoint['state_dict'])
     x = model(t0)
+    x = x.squeeze(dim=0)
+    x = x.permute(1, 2, 0)
+    x = x.detach().cpu().numpy()
+    f0 = cv2.imread(f0)
+    f0 = cv2.cvtColor(f0, cv2.COLOR_BGR2RGB)
+    print(x.shape, f0.shape, type(x), type(f0))
+    new = np.uint8(0.8*(x)+0.7*(f0))
+    # f0 = cv2.addWeighted(x, 0.3, f0, 0.7, 0, dtype = cv2.CV_64F)
+    plt.imshow(x)
+    plt.show()
     print(x.shape)
 
-    t0 = var.root + 'heatmap_training_images/train_sanket_washands_S1/image_0.jpg'
-    t0 = transforms.ToTensor()(Image.open(t0)).unsqueeze(dim=0)
-    print(t0.shape)
-    print(torch.sum(nn.Softmax2d()(t0)))
+    # t0 = var.root + 'heatmap_training_images/train_sanket_washands_S1/image_0.jpg'
+    # t0 = transforms.ToTensor()(Image.open(t0)).unsqueeze(dim=0)
+    # print(t0.shape)
+    # print(torch.sum(nn.Softmax2d()(t0)))
     # t0 = torch.cat((t0, t1), )
 
     # for i in range(5):

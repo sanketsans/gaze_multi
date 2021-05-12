@@ -57,7 +57,7 @@ class BUILDING_DATASETS:
         print('Building gaze dataset ..')
         tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
         for index, subDir in enumerate(tqdmloader):
-            if 'washands' in subDir:
+            if 'train_' in subDir:
                 tqdmloader.set_description('Train folder: {}'.format(subDir))
                 self.temp = self.populate_gaze_data(subDir)
                 self.train_folders_num += 1
@@ -109,7 +109,7 @@ class BUILDING_DATASETS:
         print('Building IMU dataset ..')
         tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
         for index, subDir in enumerate(tqdmloader):
-            if 'washands' in subDir :
+            if 'train_' in subDir :
                 tqdmloader.set_description('Train folder: {}'.format(subDir))
                 self.temp = self.populate_imu_data(subDir)
                 self.train_folders_num += 1
@@ -227,21 +227,21 @@ class BUILDING_DATASETS:
     def load_heatmap_dataset(self, reset_dataset=0):
         ## INCLUDES THE LAST FRAME
         if reset_dataset == 1:
-            # print('Deleting the old dataset .. ')
-            # _ = os.system('rm ' + os.path.dirname(os.path.realpath(__file__)) + '/' + 'heatmap_trainImg.csv')
-            # _ = os.system('rm ' + os.path.dirname(os.path.realpath(__file__)) + '/' + 'heatmap_testImg.csv')
-            #
-            # _ = os.system('rm -r ' + self.var.root + 'heatmap_training_images')
-            # _ = os.system('rm -r ' + self.var.root + 'heatmap_testing_images')
-            #
-            # _ = os.system('mkdir ' + self.var.root + 'heatmap_training_images')
-            # _ = os.system('mkdir ' + self.var.root + 'heatmap_testing_images')
+            print('Deleting the old dataset .. ')
+            _ = os.system('rm ' + os.path.dirname(os.path.realpath(__file__)) + '/' + 'heatmap_trainImg.csv')
+            _ = os.system('rm ' + os.path.dirname(os.path.realpath(__file__)) + '/' + 'heatmap_testImg.csv')
+
+            _ = os.system('rm -r ' + self.var.root + 'heatmap_training_images')
+            _ = os.system('rm -r ' + self.var.root + 'heatmap_testing_images')
+
+            _ = os.system('mkdir ' + self.var.root + 'heatmap_training_images')
+            _ = os.system('mkdir ' + self.var.root + 'heatmap_testing_images')
             train_frame_index, test_frame_index = 0, 0
             trainpaths, testpaths = [], []
             print("Building heatmap dataset ..")
             tqdmloader = tqdm(sorted(os.listdir(self.var.root)))
             for index, subDir in enumerate(tqdmloader):
-                if 'washands' in subDir :
+                if 'train_' in subDir :
                     tqdmloader.set_description('Train folder: {}'.format(subDir))
                     _ = os.system('mkdir ' + self.var.root + 'heatmap_training_images/' + subDir)
                     total_frames = 0
@@ -265,7 +265,7 @@ class BUILDING_DATASETS:
                         frame = cv2.resize(frame, (512, 288))
                         heatmapshow = None
                         try:
-                            x = self.load_heatmap(frame, 1, self.var.trim_frame_size, i+4)
+                            x = self.load_heatmap(frame, 1, self.var.trim_frame_size, i-4)
                             heatmapshow = cv2.normalize(x, heatmapshow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
                             heatmapshow = cv2.applyColorMap(heatmapshow, cv2.COLORMAP_JET)
                             # frame = cv2.addWeighted(heatmapshow, 0.5, frame, 0.7, 0)
@@ -307,7 +307,7 @@ class BUILDING_DATASETS:
                         frame = cv2.resize(frame, (512, 288)) # (398, 224)
                         heatmapshow = None
                         try:
-                            x = self.load_heatmap(frame, 1, self.var.trim_frame_size, i+4)
+                            x = self.load_heatmap(frame, 1, self.var.trim_frame_size, i-4)
                             heatmapshow = cv2.normalize(x, heatmapshow, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
                             heatmapshow = cv2.applyColorMap(heatmapshow, cv2.COLORMAP_JET)
                             # frame = cv2.addWeighted(heatmapshow, 0.5, frame, 0.7, 0)
@@ -420,7 +420,7 @@ if __name__ == "__main__":
     # dataframes.load_unified_gaze_dataset()
     dataframes.load_unified_imu_dataset()
     dataframes.load_unified_gaze_dataset()
-    dataframes.load_unified_frame_dataset(reset_dataset=1)
+    # dataframes.load_unified_frame_dataset(reset_dataset=1)
     dataframes.load_heatmap_dataset(reset_dataset=1)
 
     # trainIMU, testIMU = dataframes.load_unified_imu_dataset()
